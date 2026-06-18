@@ -127,7 +127,7 @@ def train_model(args):
         
         # Calculate Validation Metrics
         precision, recall, f1, _ = precision_recall_fscore_support(
-            val_trues, val_preds, average='binary'
+            val_trues, val_preds, average='binary', zero_division=0
         )
         
         train_losses.append(epoch_train_loss)
@@ -186,7 +186,7 @@ def train_model(args):
     
     # Final Metrics Summary
     acc = accuracy_score(final_trues, final_preds)
-    p, r, f, _ = precision_recall_fscore_support(final_trues, final_preds, average='binary')
+    p, r, f, _ = precision_recall_fscore_support(final_trues, final_preds, average='binary', zero_division=0)
     
     print("\n================== FINAL METRICS ==================")
     print(f"Accuracy:  {acc*100:.2f}%")
