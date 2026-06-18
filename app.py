@@ -216,9 +216,9 @@ with st.sidebar:
                 
                 col1, col2 = st.columns(2)
                 with col1:
-                    st.image(img_rgb, caption="Original Cover", use_container_width=True)
+                    st.image(img_rgb, caption="Original Cover", width="stretch")
                 with col2:
-                    st.image(stego_rgb, caption="Generated Stego Image", use_container_width=True)
+                    st.image(stego_rgb, caption="Generated Stego Image", width="stretch")
                 
                 # Save stego to byte array for download
                 is_success, buffer = cv2.imencode(".png", stego_img)
@@ -311,7 +311,7 @@ else:
                 st.info("No synthetic samples found. Run training in the sidebar first to generate data.")
                 
         if uploaded_image is not None:
-            st.image(uploaded_image, caption="Selected Image Preview (Resized internally to 256x256)", use_container_width=True)
+            st.image(uploaded_image, caption="Selected Image Preview (Resized internally to 256x256)", width="stretch")
         st.markdown('</div>', unsafe_allow_html=True)
         
     with col_result:
@@ -392,11 +392,11 @@ else:
         col_orig, col_hmap, col_over = st.columns(3)
         
         with col_orig:
-            st.image(st.session_state['original_rgb'], caption="Original Color Image", use_container_width=True)
+            st.image(st.session_state['original_rgb'], caption="Original Color Image", width="stretch")
         with col_hmap:
-            st.image(st.session_state['gradcam_heatmap'], caption="Grad-CAM Heatmap", use_container_width=True)
+            st.image(st.session_state['gradcam_heatmap'], caption="Grad-CAM Heatmap", width="stretch")
         with col_over:
-            st.image(st.session_state['gradcam_overlay'], caption="Superimposed Heatmap Overlay", use_container_width=True)
+            st.image(st.session_state['gradcam_overlay'], caption="Superimposed Heatmap Overlay", width="stretch")
             
         st.markdown('</div>', unsafe_allow_html=True)
         
@@ -405,7 +405,7 @@ else:
         st.write("Below are the activation patterns from the **Dual-Path Enhancement Block (DEB)** in the first stage of the network, highlighting how the parallel residual and dense paths extract high-frequency steganographic artifacts.")
         
         # Display the extracted features image grid
-        st.image(st.session_state['features_img'], caption="Stage 1 DEB Feature Channel Activations (First 16 channels)", use_container_width=True)
+        st.image(st.session_state['features_img'], caption="Stage 1 DEB Feature Channel Activations (First 16 channels)", width="stretch")
         
         st.markdown('</div>', unsafe_allow_html=True)
         
@@ -413,7 +413,7 @@ else:
         if os.path.exists("training_curves.png"):
             with st.expander("📈 View Model Training Performance Curves"):
                 st.write("These curves illustrate the training loss, validation loss, training accuracy, and validation accuracy achieved by the UC-DFNet model during training.")
-                st.image("training_curves.png", caption="UC-DFNet Training & Validation Curves", use_container_width=True)
+                st.image("training_curves.png", caption="UC-DFNet Training & Validation Curves", width="stretch")
                 
         if os.path.exists("confusion_matrix.png"):
             with st.expander("📊 View Confusion Matrix"):
