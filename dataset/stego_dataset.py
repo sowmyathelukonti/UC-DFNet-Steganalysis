@@ -11,7 +11,7 @@ import sys
 
 # Ensure parent directory is in path to import utils
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from utils import embed_lsb
+from utils import embed_lsb, embed_lsb_matching, embed_random_path
 
 class StegoDataset(Dataset):
     """
@@ -127,10 +127,17 @@ def generate_synthetic_dataset(data_dir="data", num_samples=100, img_size=(256, 
         cover_path = os.path.join(cover_dir, f"cover_{i:04d}.png")
         cv2.imwrite(cover_path, img)
         
-        # 2. Embed secret message to create Stego Image
-        # Message size should be reasonable but sufficient to create stego changes
+        # 2. Embed secret message to create Stego Image using a mix of algorithms and channels
         message = f"UC-DFNet_Stego_Payload_ID_{i:04d}_{generate_random_string(80)}"
-        stego_img = embed_lsb(img, message)
+        algo = random.choice(["lsb_replacement", "lsb_matching", "random_path"])
+        channels_opt = random.choice([[0, 1, 2], [0], [1], [2]])  # All, Red, Green, or Blue
+        
+        if algo == "lsb_replacement":
+            stego_img = embed_lsb(img, message, channels=channels_opt)
+        elif algo == "lsb_matching":
+            stego_img = embed_lsb_matching(img, message, channels=channels_opt)
+        else:
+            stego_img = embed_random_path(img, message, key=random.randint(1, 1000), channels=channels_opt)
         
         # Save Stego Image
         stego_path = os.path.join(stego_dir, f"stego_{i:04d}.png")

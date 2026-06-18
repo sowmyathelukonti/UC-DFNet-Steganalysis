@@ -11,7 +11,7 @@ import time
 # Import local modules
 from models.ucdfnet import UCDFNet
 from test import GradCAM, preprocess_image, get_heatmap_overlay, run_inference, visualize_features
-from utils import embed_lsb, extract_lsb
+from utils import embed_lsb, extract_lsb, embed_lsb_matching, embed_random_path, extract_random_path
 from dataset.stego_dataset import generate_synthetic_dataset
 from train import train_model
 
@@ -197,8 +197,24 @@ with st.sidebar:
     pg_mode = st.selectbox("Select Sandbox Operation", ["None", "Embed Message", "Extract Message"])
     
     if pg_mode == "Embed Message":
-        st.write("Embed text into a clean cover image using standard LSB steganography.")
-        raw_img_file = st.file_uploader("Upload Clean Image (PNG)", type=["png", "jpg"], key="embed_upload")
+        st.write("Embed text into a clean cover image using multiple algorithms.")
+        raw_img_file = st.file_uploader("Upload Clean Image (PNG/JPG)", type=["png", "jpg", "jpeg"], key="embed_upload")
+        
+        algo = st.selectbox("Embedding Algorithm", ["LSB Replacement", "LSB Matching", "Random Path LSB"])
+        
+        channel_desc = st.selectbox("Channels to use", ["All Channels (RGB)", "Red Channel Only", "Green Channel Only", "Blue Channel Only"])
+        channel_map = {
+            "All Channels (RGB)": [0, 1, 2],
+            "Red Channel Only": [0],
+            "Green Channel Only": [1],
+            "Blue Channel Only": [2]
+        }
+        ch_list = channel_map[channel_desc]
+        
+        key = 42
+        if algo == "Random Path LSB":
+            key = st.number_input("Secret Key (Integer)", min_value=1, max_value=999999, value=42, key="embed_key")
+            
         secret_msg = st.text_input("Enter Secret Message", "My secret stegano payload 🤫")
         
         if raw_img_file and secret_msg:
@@ -208,7 +224,12 @@ with st.sidebar:
             
             # Embed message
             try:
-                stego_img = embed_lsb(img, secret_msg)
+                if algo == "LSB Replacement":
+                    stego_img = embed_lsb(img, secret_msg, channels=ch_list)
+                elif algo == "LSB Matching":
+                    stego_img = embed_lsb_matching(img, secret_msg, channels=ch_list)
+                else:
+                    stego_img = embed_random_path(img, secret_msg, key=int(key), channels=ch_list)
                 
                 # Convert BGR to RGB for previewing
                 img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
@@ -233,20 +254,42 @@ with st.sidebar:
                 st.error(f"Embedding failed: {e}")
                 
     elif pg_mode == "Extract Message":
-        st.write("Extract hidden text embedded in LSB of an image.")
+        st.write("Extract hidden text embedded in an image.")
         stego_img_file = st.file_uploader("Upload Stego Image (PNG)", type=["png"], key="extract_upload")
         
+        algo = st.selectbox("Expected Algorithm", ["LSB Replacement / Matching", "Random Path LSB"])
+        
+        channel_desc = st.selectbox("Expected Channels", ["All Channels (RGB)", "Red Channel Only", "Green Channel Only", "Blue Channel Only"])
+        channel_map = {
+            "All Channels (RGB)": [0, 1, 2],
+            "Red Channel Only": [0],
+            "Green Channel Only": [1],
+            "Blue Channel Only": [2]
+        }
+        ch_list = channel_map[channel_desc]
+        
+        key = 42
+        if algo == "Random Path LSB":
+            key = st.number_input("Secret Key (Integer)", min_value=1, max_value=999999, value=42, key="extract_key")
+            
         if stego_img_file:
             file_bytes = np.asarray(bytearray(stego_img_file.read()), dtype=np.uint8)
             img = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
             
             if st.button("🔑 Extract Message"):
-                extracted_str = extract_lsb(img)
-                if extracted_str:
-                    st.info("Extracted Payload:")
-                    st.code(extracted_str)
-                else:
-                    st.warning("No message detected in LSB (extracted null string).")
+                try:
+                    if algo == "LSB Replacement / Matching":
+                        extracted_str = extract_lsb(img, channels=ch_list)
+                    else:
+                        extracted_str = extract_random_path(img, key=int(key), channels=ch_list)
+                        
+                    if extracted_str:
+                        st.info("Extracted Payload:")
+                        st.code(extracted_str)
+                    else:
+                        st.warning("No message detected (extracted null string).")
+                except Exception as e:
+                    st.error(f"Extraction failed: {e}")
 
 
 # Main Panel Content

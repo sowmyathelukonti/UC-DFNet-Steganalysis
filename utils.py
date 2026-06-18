@@ -29,64 +29,161 @@ def bits_to_string(bits: list) -> str:
         chars.append(chr(char_val))
     return "".join(chars)
 
-def embed_lsb(image: np.ndarray, message: str) -> np.ndarray:
+def embed_lsb(image: np.ndarray, message: str, channels=[0, 1, 2]) -> np.ndarray:
     """
-    Embed a text message into the Least Significant Bits of a color image.
-    Supports 3-channel color images (BGR/RGB).
+    Embed a text message into the Least Significant Bits of a color image
+    for selected channels.
     """
     stego_image = image.copy()
     bits = string_to_bits(message)
     total_bits = len(bits)
     
-    h, w, c = stego_image.shape
-    total_pixels = h * w * c
+    h, w, _ = stego_image.shape
+    total_slots = h * w * len(channels)
     
-    if total_bits > total_pixels:
-        raise ValueError(f"Message too long! Requires {total_bits} bits, but image only has capacity for {total_pixels} bits.")
+    if total_bits > total_slots:
+        raise ValueError(f"Message too long! Requires {total_bits} bits, but selection only has capacity for {total_slots} bits.")
     
     bit_idx = 0
-    # Flatten the image loop for embedding
     for y in range(h):
         for x in range(w):
-            for channel in range(c):
+            for c in channels:
                 if bit_idx >= total_bits:
                     return stego_image
-                # Clear the LSB and set it to the message bit
-                val = int(stego_image[y, x, channel])
+                val = int(stego_image[y, x, c])
                 val = (val & ~1) | bits[bit_idx]
-                stego_image[y, x, channel] = np.clip(val, 0, 255).astype(np.uint8)
+                stego_image[y, x, c] = np.clip(val, 0, 255).astype(np.uint8)
                 bit_idx += 1
                 
     return stego_image
 
-def extract_lsb(image: np.ndarray) -> str:
+def extract_lsb(image: np.ndarray, channels=[0, 1, 2]) -> str:
     """
-    Extract a hidden text message from the LSBs of a color image.
-    Stops extracting when the null terminator (8 consecutive zero bits) is found.
+    Extract a hidden text message from the LSBs of a color image
+    from selected channels.
     """
-    h, w, c = image.shape
+    h, w, _ = image.shape
     bits = []
-    
-    # We will check for the null terminator byte on the fly
     current_byte_bits = []
     
     for y in range(h):
         for x in range(w):
-            for channel in range(c):
-                # Get the LSB
-                val = int(image[y, x, channel])
+            for c in channels:
+                val = int(image[y, x, c])
                 bit = val & 1
                 bits.append(bit)
                 current_byte_bits.append(bit)
                 
-                # Check for null terminator after every full byte (8 bits)
                 if len(current_byte_bits) == 8:
                     byte_val = int("".join(map(str, current_byte_bits)), 2)
                     if byte_val == 0:
-                        # Null terminator found, stop extracting
                         return bits_to_string(bits)
                     current_byte_bits = []
                     
+    return bits_to_string(bits)
+
+def embed_lsb_matching(image: np.ndarray, message: str, channels=[0, 1, 2]) -> np.ndarray:
+    """
+    Embed a text message using LSB Matching (LSB ±1).
+    Adds or subtracts 1 randomly when the LSB doesn't match the message bit.
+    """
+    import random
+    stego_image = image.copy()
+    bits = string_to_bits(message)
+    total_bits = len(bits)
+    
+    h, w, _ = stego_image.shape
+    total_slots = h * w * len(channels)
+    
+    if total_bits > total_slots:
+        raise ValueError(f"Message too long! Requires {total_bits} bits, but selection only has capacity for {total_slots} bits.")
+        
+    random.seed(42)  # Set seed locally for reproducibility
+    
+    bit_idx = 0
+    for y in range(h):
+        for x in range(w):
+            for c in channels:
+                if bit_idx >= total_bits:
+                    return stego_image
+                val = int(stego_image[y, x, c])
+                target_bit = bits[bit_idx]
+                
+                if (val & 1) != target_bit:
+                    change = random.choice([-1, 1])
+                    if val == 0:
+                        change = 1
+                    elif val == 255:
+                        change = -1
+                    val += change
+                    
+                stego_image[y, x, c] = np.clip(val, 0, 255).astype(np.uint8)
+                bit_idx += 1
+                
+    return stego_image
+
+def embed_random_path(image: np.ndarray, message: str, key: int = 42, channels=[0, 1, 2]) -> np.ndarray:
+    """
+    Embed a message in a pseudo-random path of pixels determined by a secret key.
+    """
+    stego_image = image.copy()
+    bits = string_to_bits(message)
+    total_bits = len(bits)
+    
+    h, w, _ = stego_image.shape
+    
+    # Generate coordinates for selected channels
+    coords = []
+    for y in range(h):
+        for x in range(w):
+            for c in channels:
+                coords.append((y, x, c))
+                
+    if total_bits > len(coords):
+        raise ValueError(f"Message too long! Requires {total_bits} bits, but selection only has capacity for {len(coords)} bits.")
+        
+    rng = np.random.default_rng(key)
+    rng.shuffle(coords)
+    
+    for bit_idx, (y, x, c) in enumerate(coords):
+        if bit_idx >= total_bits:
+            break
+        val = int(stego_image[y, x, c])
+        val = (val & ~1) | bits[bit_idx]
+        stego_image[y, x, c] = np.clip(val, 0, 255).astype(np.uint8)
+        
+    return stego_image
+
+def extract_random_path(image: np.ndarray, key: int = 42, channels=[0, 1, 2]) -> str:
+    """
+    Extract a message from a pseudo-random path of pixels determined by a secret key.
+    """
+    h, w, _ = image.shape
+    
+    coords = []
+    for y in range(h):
+        for x in range(w):
+            for c in channels:
+                coords.append((y, x, c))
+                
+    rng = np.random.default_rng(key)
+    rng.shuffle(coords)
+    
+    bits = []
+    current_byte_bits = []
+    
+    for y, x, c in coords:
+        val = int(image[y, x, c])
+        bit = val & 1
+        bits.append(bit)
+        current_byte_bits.append(bit)
+        
+        if len(current_byte_bits) == 8:
+            byte_val = int("".join(map(str, current_byte_bits)), 2)
+            if byte_val == 0:
+                return bits_to_string(bits)
+            current_byte_bits = []
+            
     return bits_to_string(bits)
 
 def plot_training_curves(train_losses, val_losses, train_accs, val_accs, save_dir="."):
