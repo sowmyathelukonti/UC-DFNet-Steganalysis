@@ -238,3 +238,80 @@ def plot_confusion_matrix(cm, classes, save_path="confusion_matrix.png"):
     plt.xlabel('Predicted label')
     plt.savefig(save_path, dpi=300)
     plt.close()
+
+def embed_dct(image: np.ndarray, message: str, channels=[0, 1, 2], Q: float = 16.0) -> np.ndarray:
+    """
+    Embed a text message in the quantized DCT coefficients of 8x8 blocks.
+    Uses mid-frequency AC coefficients for visual imperceptibility and statistical stability.
+    """
+    stego_image = image.copy().astype(np.float32)
+    bits = string_to_bits(message)
+    total_bits = len(bits)
+    
+    h, w, _ = stego_image.shape
+    coeff_coords = [(1, 1), (1, 2), (2, 1)]
+    
+    bit_idx = 0
+    for y_start in range(0, h - 7, 8):
+        for x_start in range(0, w - 7, 8):
+            for c in channels:
+                block = stego_image[y_start:y_start+8, x_start:x_start+8, c]
+                dct_block = cv2.dct(block)
+                
+                # Quantize
+                quantized = np.round(dct_block / Q).astype(np.int32)
+                
+                # Embed bits in the selected coefficients
+                for u, v in coeff_coords:
+                    if bit_idx >= total_bits:
+                        dequantized = quantized.astype(np.float32) * Q
+                        stego_image[y_start:y_start+8, x_start:x_start+8, c] = cv2.idct(dequantized)
+                        return np.clip(stego_image, 0, 255).astype(np.uint8)
+                        
+                    val = int(quantized[u, v])
+                    val = (val & ~1) | bits[bit_idx]
+                    quantized[u, v] = val
+                    bit_idx += 1
+                    
+                # Reconstruct block
+                dequantized = quantized.astype(np.float32) * Q
+                stego_image[y_start:y_start+8, x_start:x_start+8, c] = cv2.idct(dequantized)
+                
+    if bit_idx < total_bits:
+        raise ValueError(f"Message too long! Requires {total_bits} bits, but selection only has capacity for {bit_idx} bits.")
+        
+    return np.clip(stego_image, 0, 255).astype(np.uint8)
+
+def extract_dct(image: np.ndarray, channels=[0, 1, 2], Q: float = 16.0) -> str:
+    """
+    Extract a hidden message from the quantized DCT coefficients of 8x8 blocks.
+    """
+    img_float = image.astype(np.float32)
+    h, w, _ = img_float.shape
+    coeff_coords = [(1, 1), (1, 2), (2, 1)]
+    
+    bits = []
+    current_byte_bits = []
+    
+    for y_start in range(0, h - 7, 8):
+        for x_start in range(0, w - 7, 8):
+            for c in channels:
+                block = img_float[y_start:y_start+8, x_start:x_start+8, c]
+                dct_block = cv2.dct(block)
+                
+                # Quantize
+                quantized = np.round(dct_block / Q).astype(np.int32)
+                
+                for u, v in coeff_coords:
+                    val = int(quantized[u, v])
+                    bit = val & 1
+                    bits.append(bit)
+                    current_byte_bits.append(bit)
+                    
+                    if len(current_byte_bits) == 8:
+                        byte_val = int("".join(map(str, current_byte_bits)), 2)
+                        if byte_val == 0:
+                            return bits_to_string(bits)
+                        current_byte_bits = []
+                        
+    return bits_to_string(bits)

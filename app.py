@@ -11,7 +11,7 @@ import time
 # Import local modules
 from models.ucdfnet import UCDFNet
 from test import GradCAM, preprocess_image, get_heatmap_overlay, run_inference, visualize_features
-from utils import embed_lsb, extract_lsb, embed_lsb_matching, embed_random_path, extract_random_path
+from utils import embed_lsb, extract_lsb, embed_lsb_matching, embed_random_path, extract_random_path, embed_dct, extract_dct
 from dataset.stego_dataset import generate_synthetic_dataset
 from train import train_model
 
@@ -200,7 +200,7 @@ with st.sidebar:
         st.write("Embed text into a clean cover image using multiple algorithms.")
         raw_img_file = st.file_uploader("Upload Clean Image (PNG/JPG)", type=["png", "jpg", "jpeg"], key="embed_upload")
         
-        algo = st.selectbox("Embedding Algorithm", ["LSB Replacement", "LSB Matching", "Random Path LSB"])
+        algo = st.selectbox("Embedding Algorithm", ["LSB Replacement", "LSB Matching", "Random Path LSB", "DCT Domain LSB"])
         
         channel_desc = st.selectbox("Channels to use", ["All Channels (RGB)", "Red Channel Only", "Green Channel Only", "Blue Channel Only"])
         channel_map = {
@@ -212,8 +212,11 @@ with st.sidebar:
         ch_list = channel_map[channel_desc]
         
         key = 42
+        dct_q = 16.0
         if algo == "Random Path LSB":
             key = st.number_input("Secret Key (Integer)", min_value=1, max_value=999999, value=42, key="embed_key")
+        elif algo == "DCT Domain LSB":
+            dct_q = st.slider("Quantization Step (Higher = More Robust but More Distorted)", min_value=4.0, max_value=64.0, value=16.0, step=4.0, key="embed_q")
             
         secret_msg = st.text_input("Enter Secret Message", "My secret stegano payload 🤫")
         
@@ -228,8 +231,10 @@ with st.sidebar:
                     stego_img = embed_lsb(img, secret_msg, channels=ch_list)
                 elif algo == "LSB Matching":
                     stego_img = embed_lsb_matching(img, secret_msg, channels=ch_list)
-                else:
+                elif algo == "Random Path LSB":
                     stego_img = embed_random_path(img, secret_msg, key=int(key), channels=ch_list)
+                else:
+                    stego_img = embed_dct(img, secret_msg, channels=ch_list, Q=float(dct_q))
                 
                 # Convert BGR to RGB for previewing
                 img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
@@ -257,7 +262,7 @@ with st.sidebar:
         st.write("Extract hidden text embedded in an image.")
         stego_img_file = st.file_uploader("Upload Stego Image (PNG)", type=["png"], key="extract_upload")
         
-        algo = st.selectbox("Expected Algorithm", ["LSB Replacement / Matching", "Random Path LSB"])
+        algo = st.selectbox("Expected Algorithm", ["LSB Replacement / Matching", "Random Path LSB", "DCT Domain LSB"])
         
         channel_desc = st.selectbox("Expected Channels", ["All Channels (RGB)", "Red Channel Only", "Green Channel Only", "Blue Channel Only"])
         channel_map = {
@@ -269,8 +274,11 @@ with st.sidebar:
         ch_list = channel_map[channel_desc]
         
         key = 42
+        dct_q = 16.0
         if algo == "Random Path LSB":
             key = st.number_input("Secret Key (Integer)", min_value=1, max_value=999999, value=42, key="extract_key")
+        elif algo == "DCT Domain LSB":
+            dct_q = st.slider("Quantization Step", min_value=4.0, max_value=64.0, value=16.0, step=4.0, key="extract_q")
             
         if stego_img_file:
             file_bytes = np.asarray(bytearray(stego_img_file.read()), dtype=np.uint8)
@@ -280,8 +288,10 @@ with st.sidebar:
                 try:
                     if algo == "LSB Replacement / Matching":
                         extracted_str = extract_lsb(img, channels=ch_list)
-                    else:
+                    elif algo == "Random Path LSB":
                         extracted_str = extract_random_path(img, key=int(key), channels=ch_list)
+                    else:
+                        extracted_str = extract_dct(img, channels=ch_list, Q=float(dct_q))
                         
                     if extracted_str:
                         st.info("Extracted Payload:")
