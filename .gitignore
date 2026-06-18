@@ -1,0 +1,27 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# PyTorch weights/models
+*.pth
+*.pt
+
+# Generated dataset and evaluation outputs
+data/
+results/
+test_results/
+temp_features.png
+
+# Matplotlib/UI charts
+training_curves.png
+confusion_matrix.png
+
+# Streamlit configurations or temp files
+.streamlit/
+*.log
+
+# OS generated files
+.DS_Store
+Thumbs.db
