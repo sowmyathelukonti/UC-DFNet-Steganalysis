@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UC-DFNet Steganalysis Portal</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+    <!-- Header Branding Banner -->
+    <header>
+        <div class="brand">
+            <div class="brand-icon">🛡️</div>
+            <div class="brand-title">
+                <h1>UC-DFNet Steganalysis Portal</h1>
+                <p>Universal Color Dual-Path Fractal Network for Color Image Steganalysis & Visual Interpretability</p>
+            </div>
+        </div>
+        <div class="device-badge" id="device-badge">DEVICE: DETECTING...</div>
+    </header>
+
+    <!-- Sticky Tab Navigation -->
+    <div class="tabs-container">
+        <button class="tab-btn active" data-tab="steganalysis-tab">🔍 Steganalysis Dashboard</button>
+        <button class="tab-btn" data-tab="sandbox-tab">🎨 Steganography Sandbox</button>
+        <button class="tab-btn" data-tab="training-tab">🎓 Training Wizard</button>
+    </div>
+
+    <!-- Main Content Container -->
+    <main>
+        
+        <!-- ================== TAB 1: STEGANALYSIS ================== -->
+        <div class="tab-content active" id="steganalysis-tab">
+            <div class="grid-2">
+                
+                <!-- Left Panel: Select and Preview Cover/Stego -->
+                <div class="card">
+                    <div class="card-title">1. Select Input Image</div>
+                    <div class="card-subtitle">Choose a color image file to scan for hidden steganographic payloads.</div>
+                    
+                    <div class="dropzone" id="scan-dropzone">
+                        <div id="scan-dropzone-inner">
+                            <div class="dropzone-icon">📁</div>
+                            <div class="dropzone-text">Click to choose or Drag & Drop image here</div>
+                            <div class="dropzone-subtext">Supports PNG, JPG, JPEG, BMP</div>
+                        </div>
+                        <img id="scan-preview" class="preview-img" style="display: none;" alt="Scan Preview">
+                        <input type="file" id="scan-file-input" accept="image/*">
+                    </div>
+                    
+                    <div style="margin-top: 25px;">
+                        <button class="btn btn-primary" id="btn-scan" disabled>🔎 Run UC-DFNet Steganalysis</button>
+                    </div>
+                </div>
+                
+                <!-- Right Panel: Results & Grad-CAM -->
+                <div class="card">
+                    <div class="card-title">2. Detection Results</div>
+                    <div class="card-subtitle">Model inference outputs and visual explainability.</div>
+                    
+                    <!-- Result Box -->
+                    <div class="result-box" id="scan-result-box" style="display: none;">
+                        <div class="result-heading">Detection Status</div>
+                        <div class="result-status" id="scan-result-status">🛡️ CLEAN IMAGE</div>
+                        <div class="result-conf" id="scan-result-conf">Inference Confidence: 99.87%</div>
+                    </div>
+                    
+                    <!-- Grad-CAM Display -->
+                    <div class="result-overlay-box">
+                        <div class="result-overlay-title">Grad-CAM Spatial Explainability Heatmap:</div>
+                        <div class="overlay-container">
+                            <span id="gradcam-placeholder-text" style="color: var(--text-muted); font-size: 0.9rem;">
+                                Heatmap overlay will render here after scanning
+                            </span>
+                            <img id="gradcam-img" style="display: none;" alt="Gradcam Overlay">
+                        </div>
+                    </div>
+                </div>
+                
+            </div>
+            
+            <!-- Intermediate Features Section -->
+            <div class="card" id="features-container" style="margin-top: 30px; display: none;">
+                <div class="card-title">3. Stage 1 Dual-Path Enhancement Block Activations</div>
+                <div class="card-subtitle">Visualizes the first 16 feature extraction channel activations.</div>
+                <div class="overlay-container" style="min-height: 200px;">
+                    <span id="features-placeholder-text" style="color: var(--text-muted); font-size: 0.9rem;">
+                        Features mapping will render here
+                    </span>
+                    <img id="features-img" style="display: none; max-height: 400px; width: 100%; object-fit: contain;" alt="Feature Activations">
+                </div>
+            </div>
+        </div>
+
+        <!-- ================== TAB 2: STEGANOGRAPHY SANDBOX ================== -->
+        <div class="tab-content" id="sandbox-tab">
+            <div class="grid-2">
+                
+                <!-- Left Column: Embed Message -->
+                <div class="card">
+                    <div class="card-title">🔒 Embed Message</div>
+                    <div class="card-subtitle">Inject secret text into a cover image using different algorithms.</div>
+                    
+                    <div class="dropzone" id="cov-dropzone" style="min-height: 180px; padding: 20px 10px;">
+                        <div id="cov-dropzone-inner">
+                            <div class="dropzone-icon" style="font-size: 1.8rem;">📁</div>
+                            <div class="dropzone-text" style="font-size: 0.85rem;">Click to choose Cover Image (PNG)</div>
+                        </div>
+                        <img id="cov-preview" class="preview-img" style="display: none; max-height: 140px;" alt="Cover Preview">
+                        <input type="file" id="cov-file-input" accept="image/*">
+                    </div>
+                    
+                    <div class="form-group" style="margin-top: 15px;">
+                        <label for="embed-algo">Embedding Method:</label>
+                        <select id="embed-algo">
+                            <option value="LSB Replacement">LSB Replacement</option>
+                            <option value="LSB Matching">LSB Matching (LSB ±1)</option>
+                            <option value="Random Path LSB">Random Path LSB (Key-based)</option>
+                            <option value="DCT Domain LSB">DCT Domain LSB (Quantized)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="embed-channels">Color Channels:</label>
+                        <select id="embed-channels">
+                            <option value="All Channels (RGB)">All Channels (RGB)</option>
+                            <option value="Red Channel Only">Red Channel Only</option>
+                            <option value="Green Channel Only">Green Channel Only</option>
+                            <option value="Blue Channel Only">Blue Channel Only</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="embed-param">Secret Key / Quantization Q:</label>
+                        <input type="number" id="embed-param" value="42" min="1">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="embed-message">Message to Hide:</label>
+                        <input type="text" id="embed-message" value="Universal stego message! 🤫">
+                    </div>
+                    
+                    <button class="btn btn-success" id="btn-embed" disabled>🔒 Embed Message</button>
+                    
+                    <!-- Download Box -->
+                    <div class="result-box clean" id="embed-result-box" style="display: none; margin-top: 20px; padding: 15px;">
+                        <div style="font-size: 0.85rem; font-weight: 700; color: var(--accent-green); margin-bottom: 10px;">Stego Output Ready!</div>
+                        <button class="btn btn-primary" id="btn-download-stego">💾 Download Stego Image</button>
+                    </div>
+                </div>
+                
+                <!-- Right Column: Extract Message -->
+                <div class="card">
+                    <div class="card-title">🔑 Extract Message</div>
+                    <div class="card-subtitle">Decode hidden text embedded inside a stego image.</div>
+                    
+                    <div class="dropzone" id="steg-dropzone" style="min-height: 180px; padding: 20px 10px;">
+                        <div id="steg-dropzone-inner">
+                            <div class="dropzone-icon" style="font-size: 1.8rem;">📁</div>
+                            <div class="dropzone-text" style="font-size: 0.85rem;">Click to choose Stego Image (PNG)</div>
+                        </div>
+                        <img id="steg-preview" class="preview-img" style="display: none; max-height: 140px;" alt="Stego Preview">
+                        <input type="file" id="steg-file-input" accept="image/*">
+                    </div>
+                    
+                    <div class="form-group" style="margin-top: 15px;">
+                        <label for="extract-algo">Expected Method:</label>
+                        <select id="extract-algo">
+                            <option value="LSB Replacement / Matching">LSB Replacement / Matching</option>
+                            <option value="Random Path LSB">Random Path LSB (Key-based)</option>
+                            <option value="DCT Domain LSB">DCT Domain LSB (Quantized)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="extract-channels">Expected Channels:</label>
+                        <select id="extract-channels">
+                            <option value="All Channels (RGB)">All Channels (RGB)</option>
+                            <option value="Red Channel Only">Red Channel Only</option>
+                            <option value="Green Channel Only">Green Channel Only</option>
+                            <option value="Blue Channel Only">Blue Channel Only</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="extract-param">Secret Key / Q Value:</label>
+                        <input type="number" id="extract-param" value="42" min="1">
+                    </div>
+                    
+                    <button class="btn btn-danger" id="btn-extract" disabled>🔓 Extract Message</button>
+                    
+                    <!-- Output message console -->
+                    <div style="margin-top: 25px;">
+                        <label>Extracted Secret Message:</label>
+                        <div class="console-box stego-text" id="extracted-message-console">
+                            Awaiting payload extraction...
+                        </div>
+                    </div>
+                </div>
+                
+            </div>
+        </div>
+
+        <!-- ================== TAB 3: TRAINING WIZARD ================== -->
+        <div class="tab-content" id="training-tab">
+            <div class="card">
+                <div class="card-title">🎓 Model Training Wizard</div>
+                <div class="card-subtitle">Train the UC-DFNet model locally on automatically synthesized cover/stego datasets.</div>
+                
+                <div class="grid-2" style="margin-top: 20px;">
+                    
+                    <!-- Left: Parameters -->
+                    <div>
+                        <div class="form-group">
+                            <label for="train-samples">Samples per class:</label>
+                            <input type="number" id="train-samples" value="50" min="10" max="500">
+                            <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 3px;">
+                                Total stego images created will equal this count. Cover images count will match.
+                            </p>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="train-epochs">Training Epochs:</label>
+                            <input type="number" id="train-epochs" value="5" min="1" max="50">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="train-batch">Batch Size:</label>
+                            <input type="number" id="train-batch" value="8" min="2" max="64">
+                        </div>
+                        
+                        <button class="btn btn-primary" id="btn-train" style="height: 50px; margin-top: 10px;">
+                            🚀 Start Local Training
+                        </button>
+                    </div>
+                    
+                    <!-- Right: Console Log & Progress -->
+                    <div>
+                        <div class="progress-container">
+                            <label style="display: flex; justify-content: space-between;">
+                                <span>Training Progress Status:</span>
+                                <span id="progress-val" style="color: var(--accent-blue);">0%</span>
+                            </label>
+                            <div class="progress-bar-bg" style="margin-top: 5px;">
+                                <div class="progress-bar-fill" id="progress-bar"></div>
+                            </div>
+                        </div>
+                        
+                        <label>Console Terminal Output Logs:</label>
+                        <div class="console-box" id="train-console">
+                            Awaiting training wizard initialization...
+                        </div>
+                    </div>
+                    
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script src="/static/main.js"></script>
+</body>
+</html>
