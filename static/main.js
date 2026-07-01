@@ -265,10 +265,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const trainBatch = document.getElementById('train-batch');
     const btnTrain = document.getElementById('btn-train');
     
+    // Kaggle Loader Controls
+    const btnKaggle = document.getElementById('btn-kaggle');
+    const kaggleLimit = document.getElementById('kaggle-limit');
+    
     const trainConsole = document.getElementById('train-console');
     const progressBar = document.getElementById('progress-bar');
     
     let isTraining = false;
+    let activeAction = null; // 'train' or 'kaggle'
     let pollInterval = null;
 
     btnTrain.addEventListener('click', async () => {
@@ -284,12 +289,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         btnTrain.disabled = true;
+        btnKaggle.disabled = true;
         btnTrain.innerHTML = '⚡ Training...';
         trainConsole.innerText = 'Initializing training pipeline...';
         progressBar.style.width = '5%';
         isTraining = true;
+        activeAction = 'train';
 
-        // Start background training POST
         try {
             const response = await fetch('/api/train', {
                 method: 'POST',
@@ -299,35 +305,82 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await response.json();
 
             if (data.success) {
-                // Begin polling training console status
-                pollInterval = setInterval(pollTrainingStatus, 1500);
+                pollInterval = setInterval(pollStatus, 1500);
             } else {
                 alert(`Failed to start training: ${data.error}`);
                 btnTrain.disabled = false;
+                btnKaggle.disabled = false;
                 btnTrain.innerHTML = '🚀 Start Local Training';
                 isTraining = false;
+                activeAction = null;
             }
         } catch (error) {
             console.error('Train trigger failed:', error);
             alert('Failed to connect to backend training process.');
             btnTrain.disabled = false;
+            btnKaggle.disabled = false;
             btnTrain.innerHTML = '🚀 Start Local Training';
             isTraining = false;
+            activeAction = null;
         }
     });
 
-    async function pollTrainingStatus() {
+    btnKaggle.addEventListener('click', async () => {
+        if (isTraining) return;
+
+        const limit = parseInt(kaggleLimit.value);
+        if (isNaN(limit) || limit < 10) {
+            alert('Please enter a valid limit number (minimum 10).');
+            return;
+        }
+
+        btnKaggle.disabled = true;
+        btnTrain.disabled = true;
+        btnKaggle.innerHTML = '⚡ Fetching Kaggle...';
+        trainConsole.innerText = 'Connecting to Kaggle API to load dataset...';
+        progressBar.style.width = '5%';
+        isTraining = true;
+        activeAction = 'kaggle';
+
+        try {
+            const response = await fetch('/api/kaggle_load', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ limit })
+            });
+            const data = await response.json();
+
+            if (data.success) {
+                pollInterval = setInterval(pollStatus, 1500);
+            } else {
+                alert(`Kaggle load failed: ${data.error}`);
+                btnKaggle.disabled = false;
+                btnTrain.disabled = false;
+                btnKaggle.innerHTML = '📥 Fetch & Integrate Kaggle Dataset';
+                isTraining = false;
+                activeAction = null;
+            }
+        } catch (error) {
+            console.error('Kaggle trigger error:', error);
+            alert('Failed to trigger Kaggle downloader.');
+            btnKaggle.disabled = false;
+            btnTrain.disabled = false;
+            btnKaggle.innerHTML = '📥 Fetch & Integrate Kaggle Dataset';
+            isTraining = false;
+            activeAction = null;
+        }
+    });
+
+    async function pollStatus() {
         try {
             const response = await fetch('/api/train_status');
             const data = await response.json();
 
-            // Render logs in monospace terminal
             if (data.logs) {
                 trainConsole.innerText = data.logs;
                 trainConsole.scrollTop = trainConsole.scrollHeight;
             }
 
-            // Estimate progress
             if (data.progress) {
                 progressBar.style.width = `${data.progress}%`;
             }
@@ -335,10 +388,20 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!data.running) {
                 clearInterval(pollInterval);
                 isTraining = false;
-                btnTrain.disabled = false;
-                btnTrain.innerHTML = '🚀 Start Local Training';
                 progressBar.style.width = '100%';
-                alert('Training Wizard complete! The local model weights have been updated.');
+                
+                if (activeAction === 'train') {
+                    btnTrain.disabled = false;
+                    btnKaggle.disabled = false;
+                    btnTrain.innerHTML = '🚀 Start Local Training';
+                    alert('Training Wizard complete! The local model weights have been updated.');
+                } else if (activeAction === 'kaggle') {
+                    btnKaggle.disabled = false;
+                    btnTrain.disabled = false;
+                    btnKaggle.innerHTML = '📥 Fetch & Integrate Kaggle Dataset';
+                    alert('Kaggle Dataset download and integration complete! You can now proceed to training.');
+                }
+                activeAction = null;
             }
         } catch (error) {
             console.error('Polling Error:', error);

@@ -233,6 +233,26 @@
                         <button class="btn btn-primary" id="btn-train" style="height: 50px; margin-top: 10px;">
                             🚀 Start Local Training
                         </button>
+                        
+                        <!-- Kaggle Dataset Loader Section -->
+                        <div style="margin-top: 30px; border-top: 1px dashed var(--card-border); padding-top: 20px;">
+                            <label style="font-size: 1rem; color: var(--text-main); font-weight: 700; margin-bottom: 5px;">📥 Load Real Dataset from Kaggle</label>
+                            <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 15px;">
+                                Download Marco Zuppelli's stego images dataset and integrate a subset locally.
+                            </p>
+                            
+                            <div class="form-group">
+                                <label for="kaggle-limit">Images per class:</label>
+                                <input type="number" id="kaggle-limit" value="500" min="10" max="8000">
+                                <p style="font-size: 0.72rem; color: var(--text-muted); margin-top: 3px;">
+                                    Downloads, extracts, and resizes a subset to keep training fast and prevent high disk usage.
+                                </p>
+                            </div>
+                            
+                            <button class="btn btn-success" id="btn-kaggle" style="height: 45px;">
+                                📥 Fetch & Integrate Kaggle Dataset
+                            </button>
+                        </div>
                     </div>
                     
                     <!-- Right: Console Log & Progress -->

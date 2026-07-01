@@ -97,6 +97,41 @@ def run_training_in_background(samples, epochs, batch):
         sys.stdout = old_stdout
         training_active = False
 
+def run_kaggle_load_in_background(limit):
+    global training_active, training_logs, training_progress
+    training_active = True
+    training_logs = "Starting background Kaggle dataset integration thread...\n"
+    training_progress = 5
+    
+    old_stdout = sys.stdout
+    sys.stdout = LogStream()
+    
+    try:
+        print("Checking Kaggle API credentials and package...")
+        try:
+            import kaggle
+        except ImportError:
+            print("Kaggle python package not found. Installing via pip...")
+            import subprocess
+            subprocess.check_call([sys.executable, "-m", "pip", "install", "kaggle"])
+            
+        print("Starting dataset download & extraction (marcozuppelli/stegoimagesdataset)...")
+        from dataset.load_kaggle import download_and_integrate_kaggle
+        success = download_and_integrate_kaggle(limit_per_class=limit, target_dir="data")
+        
+        if success:
+            print("\nKaggle dataset integrated successfully! You can now start training.")
+            training_progress = 100
+        else:
+            print("\nKaggle dataset integration failed. See details above.")
+            training_progress = 0
+    except Exception as e:
+        print(f"\nKaggle loading failed with error: {e}")
+    finally:
+        sys.stdout = old_stdout
+        training_active = False
+
+
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -283,6 +318,21 @@ def api_train_status():
         "logs": training_logs,
         "progress": training_progress
     })
+
+@app.route('/api/kaggle_load', methods=['POST'])
+def api_kaggle_load():
+    global training_active
+    if training_active:
+        return jsonify({"success": False, "error": "A background task (training or downloading) is already in progress."}), 400
+        
+    params = request.get_json() or {}
+    limit = int(params.get('limit', 500))
+    
+    # Run in background thread
+    t = threading.Thread(target=run_kaggle_load_in_background, args=(limit,))
+    t.start()
+    
+    return jsonify({"success": True})
 
 if __name__ == '__main__':
     # Load model weights on startup
