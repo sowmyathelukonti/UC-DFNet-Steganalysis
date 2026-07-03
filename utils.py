@@ -327,3 +327,27 @@ def extract_dct(image: np.ndarray, channels=[0, 1, 2], Q: float = 16.0) -> str:
                         current_byte_bits = []
                         
     return bits_to_string(bits)
+
+def calculate_lsb_transition_rate(image: np.ndarray, channels=[0, 1, 2]) -> float:
+    """
+    Calculates the spatial transition rate of the LSB bitplane.
+    Clean natural images have highly correlated LSBs (transition rate < 0.465).
+    Stego images with random payloads have randomized LSBs (transition rate near 0.50).
+    """
+    h, w, _ = image.shape
+    transitions = 0
+    total_pairs = 0
+    
+    # Check horizontal and vertical adjacent pairs in selected channels
+    for c in channels:
+        # Horizontal transitions
+        diff_h = np.abs((image[:, :-1, c].astype(np.int32) & 1) - (image[:, 1:, c].astype(np.int32) & 1))
+        transitions += np.sum(diff_h)
+        total_pairs += diff_h.size
+        
+        # Vertical transitions
+        diff_v = np.abs((image[:-1, :, c].astype(np.int32) & 1) - (image[1:, :, c].astype(np.int32) & 1))
+        transitions += np.sum(diff_v)
+        total_pairs += diff_v.size
+        
+    return float(transitions / total_pairs) if total_pairs > 0 else 0.5

@@ -749,12 +749,36 @@
                 let width = imageData.width;
                 let height = imageData.height;
                 
-                let blockSize = 16;
-                let cols = Math.floor(width / blockSize);
-                let rows = Math.floor(height / blockSize);
+                let transitions = 0;
+                let totalPairs = 0;
                 
-                let stegoBlocks = 0;
-                let totalBlocks = cols * rows;
+                // Calculate transitions horizontally and vertically for RGB channels
+                for (let y = 0; y < height; y++) {
+                    for (let x = 0; x < width; x++) {
+                        let idx = (y * width + x) * 4;
+                        
+                        // Horizontal neighbor
+                        if (x < width - 1) {
+                            let nextIdx = (y * width + (x + 1)) * 4;
+                            for (let c = 0; c < 3; c++) {
+                                transitions += Math.abs((data[idx + c] & 1) - (data[nextIdx + c] & 1));
+                                totalPairs++;
+                            }
+                        }
+                        
+                        // Vertical neighbor
+                        if (y < height - 1) {
+                            let nextIdx = ((y + 1) * width + x) * 4;
+                            for (let c = 0; c < 3; c++) {
+                                transitions += Math.abs((data[idx + c] & 1) - (data[nextIdx + c] & 1));
+                                totalPairs++;
+                            }
+                        }
+                    }
+                }
+                
+                let rate = transitions / totalPairs;
+                let isStego = rate >= 0.468;
                 
                 let heatCanvas = document.createElement('canvas');
                 heatCanvas.width = width;
@@ -769,13 +793,16 @@
                 heatCtx.drawImage(tempCanvas, 0, 0);
                 
                 heatCtx.fillStyle = 'rgba(239, 68, 68, 0.45)'; 
-                
                 let bitplaneData = tempCtx.createImageData(width, height);
+                
+                let blockSize = 16;
+                let cols = Math.floor(width / blockSize);
+                let rows = Math.floor(height / blockSize);
                 
                 for (let r = 0; r < rows; r++) {
                     for (let c = 0; c < cols; c++) {
-                        let lsbEntropy = 0;
-                        let pixelCount = 0;
+                        let blockTransitions = 0;
+                        let blockPairs = 0;
                         
                         for (let y = 0; y < blockSize; y++) {
                             for (let x = 0; x < blockSize; x++) {
@@ -785,38 +812,36 @@
                                 
                                 if (idx < data.length) {
                                     let rLsb = data[idx] & 1;
-                                    let gLsb = data[idx+1] & 1;
-                                    let bLsb = data[idx+2] & 1;
-                                    
-                                    lsbEntropy += rLsb + gLsb + bLsb;
-                                    pixelCount += 3;
+                                    let gLsb = data[idx + 1] & 1;
+                                    let bLsb = data[idx + 2] & 1;
                                     
                                     let bpIdx = (pxY * width + pxX) * 4;
                                     let val = (rLsb || gLsb || bLsb) ? 255 : 0;
-                                    bitplaneData.data[bpIdx] = val;     
-                                    bitplaneData.data[bpIdx+1] = val;   
-                                    bitplaneData.data[bpIdx+2] = val;   
-                                    bitplaneData.data[bpIdx+3] = 255;   
+                                    bitplaneData.data[bpIdx] = val;
+                                    bitplaneData.data[bpIdx+1] = val;
+                                    bitplaneData.data[bpIdx+2] = val;
+                                    bitplaneData.data[bpIdx+3] = 255;
+                                    
+                                    if (pxX < width - 1) {
+                                        let nextIdx = (pxY * width + (pxX + 1)) * 4;
+                                        blockTransitions += Math.abs(rLsb - (data[nextIdx] & 1)) + Math.abs(gLsb - (data[nextIdx+1] & 1)) + Math.abs(bLsb - (data[nextIdx+2] & 1));
+                                        blockPairs += 3;
+                                    }
                                 }
                             }
                         }
                         
-                        let ratio = lsbEntropy / pixelCount;
-                        let randomness = 1 - 2 * Math.abs(0.5 - ratio); 
-                        
-                        if (randomness > 0.88) { 
-                            stegoBlocks++;
+                        let blockRate = blockTransitions / blockPairs;
+                        if (blockRate > 0.482 && isStego) {
                             heatCtx.fillRect(c * blockSize, r * blockSize, blockSize, blockSize);
                         }
                     }
                 }
                 
-                let score = stegoBlocks / totalBlocks;
-                let isStego = score > 0.08; 
-                let confidence = isStego ? 0.70 + score * 0.30 : 0.90 - score * 0.50;
-                confidence = Math.max(0.5, Math.min(0.999, confidence));
+                let confidence = isStego ? 0.70 + (rate - 0.468) * 5.0 : 0.99 - (rate / 0.468) * 0.20;
+                confidence = Math.max(0.5, Math.min(0.9999, confidence));
                 
-                let prediction = isStego ? "Random Path LSB Stego Detected" : "Clean Cover Image";
+                let prediction = isStego ? "Stego Detected (Random Path LSB)" : "Clean Cover Image";
                 
                 return {
                     prediction,

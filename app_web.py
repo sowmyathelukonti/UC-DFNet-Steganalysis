@@ -11,7 +11,7 @@ import sys
 # Import local modules
 from models.ucdfnet import UCDFNet
 from test import GradCAM, preprocess_image, get_heatmap_overlay, run_inference, visualize_features
-from utils import embed_lsb, extract_lsb, embed_lsb_matching, embed_random_path, extract_random_path, embed_dct, extract_dct
+from utils import embed_lsb, extract_lsb, embed_lsb_matching, embed_random_path, extract_random_path, embed_dct, extract_dct, calculate_lsb_transition_rate
 from dataset.stego_dataset import generate_synthetic_dataset
 from train import train_model
 
@@ -70,6 +70,15 @@ def api_analyze():
         # 1. Preprocess and Run Inference
         image_tensor, original_rgb = preprocess_image(temp_input_path)
         pred_label, confidence, probs = run_inference(model, image_tensor, device)
+        
+        # Perform ensemble fusion using LSB transition rate check to prevent false positives
+        cv_img = cv2.imread(temp_input_path)
+        if cv_img is not None:
+            rate = calculate_lsb_transition_rate(cv_img)
+            if rate < 0.468:  # LSB bits are highly correlated -> Definitely clean cover
+                pred_label = "Clean Cover Image"
+                confidence = float(0.95 + (0.468 - rate) * 1.0)
+                confidence = min(0.9999, confidence)
         
         # 2. Run Grad-CAM explainability
         grad_cam = GradCAM(model, model.stage3_fdb)
