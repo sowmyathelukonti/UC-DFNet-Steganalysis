@@ -351,3 +351,57 @@ def calculate_lsb_transition_rate(image: np.ndarray, channels=[0, 1, 2]) -> floa
         total_pairs += diff_v.size
         
     return float(transitions / total_pairs) if total_pairs > 0 else 0.5
+
+def check_for_hidden_message(img: np.ndarray, keys=[42], channels=[0, 1, 2]) -> bool:
+    """
+    Checks if the image contains a readable ASCII message embedded using key/seed.
+    """
+    try:
+        h, w, _ = img.shape
+        total_pixels = h * w
+        
+        for key in keys:
+            # Replicate getShuffledIndices using LCG
+            indices = list(range(total_pixels))
+            state = key
+            for i in range(total_pixels - 1, 0, -1):
+                state = (1664525 * state + 1013904223) % 4294967296
+                j = state % (i + 1)
+                indices[i], indices[j] = indices[j], indices[i]
+                
+            # Now extract bits
+            current_byte_bits = []
+            chars_decoded = 0
+            readable_chars = 0
+            
+            for idx in indices:
+                y = idx // w
+                x = idx % w
+                for c in channels:
+                    bit = int(img[y, x, c]) & 1
+                    current_byte_bits.append(bit)
+                    if len(current_byte_bits) == 8:
+                        byte_val = int("".join(map(str, current_byte_bits)), 2)
+                        if byte_val == 0:  # Null terminator
+                            if chars_decoded >= 3 and readable_chars == chars_decoded:
+                                return True
+                            break
+                        
+                        # Printable ASCII characters (32 to 126) + whitespace (9, 10, 13)
+                        if (32 <= byte_val <= 126) or byte_val in [9, 10, 13]:
+                            readable_chars += 1
+                        chars_decoded += 1
+                        current_byte_bits = []
+                        
+                        # Stop if it's garbage (non-printable chars decoded) to save time
+                        if readable_chars < chars_decoded:
+                            break
+                            
+                        if chars_decoded > 200:
+                            break
+                if readable_chars < chars_decoded or chars_decoded > 200:
+                    break
+    except Exception as e:
+        print(f"Active extraction check failed: {e}")
+        
+    return False
