@@ -228,15 +228,8 @@ def api_embed():
     ch_list = channel_map.get(channel_desc, [0, 1, 2])
     
     try:
-        # Run steganographic embedding
-        if algo == "LSB Replacement":
-            stego = embed_lsb(img, message, channels=ch_list)
-        elif algo == "LSB Matching":
-            stego = embed_lsb_matching(img, message, channels=ch_list)
-        elif algo == "Random Path LSB":
-            stego = embed_random_path(img, message, key=int(param), channels=ch_list)
-        else:  # DCT Domain
-            stego = embed_dct(img, message, channels=ch_list, Q=float(param))
+        # Run steganographic embedding using ONLY Random Path LSB
+        stego = embed_random_path(img, message, key=int(param), channels=ch_list)
             
         os.makedirs('static', exist_ok=True)
         stego_path = os.path.join('static', 'stego.png')
@@ -280,12 +273,8 @@ def api_extract():
     ch_list = channel_map.get(channel_desc, [0, 1, 2])
     
     try:
-        if algo == "LSB Replacement / Matching":
-            extracted = extract_lsb(img, channels=ch_list)
-        elif algo == "Random Path LSB":
-            extracted = extract_random_path(img, key=int(param), channels=ch_list)
-        else:  # DCT
-            extracted = extract_dct(img, channels=ch_list, Q=float(param))
+        # Extract payload using ONLY Random Path LSB
+        extracted = extract_random_path(img, key=int(param), channels=ch_list)
             
         return jsonify({
             "success": True,

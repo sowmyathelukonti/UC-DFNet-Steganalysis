@@ -469,7 +469,7 @@
             <div class="brand-icon">🛡️</div>
             <div class="brand-title">
                 <h1>UC-DFNet Steganalysis Portal</h1>
-                <p>Universal Color Dual-Path Fractal Network for Color Image Steganalysis & Visual Interpretability</p>
+                <p>Specialized Random Path LSB Steganalysis & Visual Interpretability Portal</p>
             </div>
         </div>
         
@@ -484,7 +484,7 @@
     <!-- Sticky Tab Navigation -->
     <div class="tabs-container">
         <button class="tab-btn active" data-tab="steganalysis-tab">🔍 Steganalysis Dashboard</button>
-        <button class="tab-btn" data-tab="sandbox-tab">🎨 Steganography Sandbox (Client-Side)</button>
+        <button class="tab-btn" data-tab="sandbox-tab">🎨 Random Path Sandbox (Client-Side)</button>
         <button class="tab-btn" data-tab="training-tab">🎓 Training Wizard</button>
     </div>
 
@@ -498,7 +498,7 @@
                 <!-- Left Panel: Select and Preview Cover/Stego -->
                 <div class="card">
                     <div class="card-title">1. Select Input Image</div>
-                    <div class="card-subtitle">Choose a color image file to scan for hidden steganographic payloads.</div>
+                    <div class="card-subtitle">Choose a color image file to scan for hidden key-based Random Path LSB stego payloads.</div>
                     
                     <div class="dropzone" id="scan-dropzone">
                         <div id="scan-dropzone-inner">
@@ -574,12 +574,7 @@
                     
                     <div class="form-group" style="margin-top: 15px;">
                         <label for="embed-algo">Embedding Method:</label>
-                        <select id="embed-algo">
-                            <option value="LSB Replacement">LSB Replacement</option>
-                            <option value="LSB Matching">LSB Matching (LSB ±1)</option>
-                            <option value="Random Path LSB">Random Path LSB (Key-based)</option>
-                            <option value="DCT Domain LSB">DCT Domain LSB (Quantized)</option>
-                        </select>
+                        <input type="text" id="embed-algo" value="Random Path LSB" readonly class="form-control" style="background-color: var(--card-bg); color: var(--accent-purple); font-weight: bold; border-color: var(--card-border);">
                     </div>
                     
                     <div class="form-group">
@@ -593,7 +588,7 @@
                     </div>
                     
                     <div class="form-group">
-                        <label for="embed-param">Secret Key / Quantization Q:</label>
+                        <label for="embed-param">Secret Key (PRNG Seed):</label>
                         <input type="number" id="embed-param" value="42" min="1">
                     </div>
                     
@@ -627,11 +622,7 @@
                     
                     <div class="form-group" style="margin-top: 15px;">
                         <label for="extract-algo">Expected Method:</label>
-                        <select id="extract-algo">
-                            <option value="LSB Replacement / Matching">LSB Replacement / Matching</option>
-                            <option value="Random Path LSB">Random Path LSB (Key-based)</option>
-                            <option value="DCT Domain LSB">DCT Domain LSB (Quantized)</option>
-                        </select>
+                        <input type="text" id="extract-algo" value="Random Path LSB" readonly class="form-control" style="background-color: var(--card-bg); color: var(--accent-purple); font-weight: bold; border-color: var(--card-border);">
                     </div>
                     
                     <div class="form-group">
@@ -645,7 +636,7 @@
                     </div>
                     
                     <div class="form-group">
-                        <label for="extract-param">Secret Key / Q Value:</label>
+                        <label for="extract-param">Secret Key (PRNG Seed):</label>
                         <input type="number" id="extract-param" value="42" min="1">
                     </div>
                     
@@ -667,7 +658,7 @@
         <div class="tab-content" id="training-tab">
             <div class="card">
                 <div class="card-title">🎓 Model Training Wizard</div>
-                <div class="card-subtitle">Train the UC-DFNet model locally on automatically synthesized cover/stego datasets.</div>
+                <div class="card-subtitle">Train the UC-DFNet model locally on automatically synthesized key-based Random Path LSB datasets.</div>
                 
                 <div class="grid-2" style="margin-top: 20px;">
                     
@@ -963,7 +954,7 @@
                 return block;
             }
 
-            // Embedding logic on raw pixels (ImageData)
+            // Embedding logic on raw pixels (ImageData) - Random Path LSB ONLY
             function embedPayload(imageData, message, algo, channelDesc, param) {
                 let data = imageData.data;
                 let bits = stringToBits(message);
@@ -977,107 +968,19 @@
 
                 const totalPixels = data.length / 4;
 
-                // LSB Replacement
-                if (algo === "LSB Replacement") {
-                    for (let i = 0; i < data.length; i += 4) {
-                        for (let c of channels) {
-                            if (bitIdx >= bits.length) return;
-                            data[i + c] = (data[i + c] & ~1) | bits[bitIdx];
-                            bitIdx++;
-                        }
-                    }
-                }
-                // LSB Matching
-                else if (algo === "LSB Matching") {
-                    for (let i = 0; i < data.length; i += 4) {
-                        for (let c of channels) {
-                            if (bitIdx >= bits.length) return;
-                            let val = data[i + c];
-                            let target = bits[bitIdx];
-                            if ((val & 1) !== target) {
-                                let diff = Math.random() < 0.5 ? -1 : 1;
-                                if (val === 0) diff = 1;
-                                else if (val === 255) diff = -1;
-                                val += diff;
-                            }
-                            data[i + c] = val;
-                            bitIdx++;
-                        }
-                    }
-                }
-                // Random Path LSB
-                else if (algo === "Random Path LSB") {
-                    let seed = parseInt(param) || 42;
-                    let indices = getShuffledIndices(totalPixels, seed);
-                    for (let idx of indices) {
-                        let i = idx * 4;
-                        for (let c of channels) {
-                            if (bitIdx >= bits.length) return;
-                            data[i + c] = (data[i + c] & ~1) | bits[bitIdx];
-                            bitIdx++;
-                        }
-                    }
-                }
-                // Quantized DCT LSB
-                else if (algo === "DCT Domain LSB") {
-                    let Q = parseFloat(param) || 16.0;
-                    let width = imageData.width;
-                    let height = imageData.height;
-                    
-                    // Coordinates of AC coefficients to embed in (standard mid-frequency)
-                    let coords = [[1, 1], [2, 1], [1, 2]];
-
-                    // Loop over 8x8 blocks
-                    for (let by = 0; by < height; by += 8) {
-                        for (let bx = 0; bx < width; bx += 8) {
-                            for (let c of channels) {
-                                // 1. Extract 8x8 block for channel c
-                                let block = Array.from({length: 8}, () => new Float32Array(8));
-                                for (let y = 0; y < 8; y++) {
-                                    for (let x = 0; x < 8; x++) {
-                                        let pxIdx = ((by + y) * width + (bx + x)) * 4;
-                                        block[y][x] = data[pxIdx + c];
-                                    }
-                                }
-                                
-                                // 2. Compute 2D DCT
-                                let dct = dct8x8(block);
-                                
-                                // 3. Modify AC coefficients LSB
-                                for (let coord of coords) {
-                                    if (bitIdx >= bits.length) break;
-                                    let u = coord[0];
-                                    let v = coord[1];
-                                    
-                                    // Quantize coefficient
-                                    let val = Math.round(dct[u][v] / Q);
-                                    // Replace LSB
-                                    val = (val & ~1) | bits[bitIdx];
-                                    bitIdx++;
-                                    // Dequantize
-                                    dct[u][v] = val * Q;
-                                }
-                                
-                                // 4. Compute IDCT back
-                                let idct = idct8x8(dct);
-                                
-                                // 5. Write back to ImageData
-                                for (let y = 0; y < 8; y++) {
-                                    for (let x = 0; x < 8; x++) {
-                                        let pxIdx = ((by + y) * width + (bx + x)) * 4;
-                                        let pixelVal = Math.round(idct[y][x]);
-                                        data[pxIdx + c] = Math.max(0, Math.min(255, pixelVal));
-                                    }
-                                }
-                                
-                                if (bitIdx >= bits.length) return;
-                            }
-                        }
+                let seed = parseInt(param) || 42;
+                let indices = getShuffledIndices(totalPixels, seed);
+                for (let idx of indices) {
+                    let i = idx * 4;
+                    for (let c of channels) {
+                        if (bitIdx >= bits.length) return;
+                        data[i + c] = (data[i + c] & ~1) | bits[bitIdx];
+                        bitIdx++;
                     }
                 }
             }
 
-            // Extract logic from raw pixels (ImageData)
+            // Extract logic from raw pixels (ImageData) - Random Path LSB ONLY
             function extractPayload(imageData, algo, channelDesc, param) {
                 let data = imageData.data;
                 let bits = [];
@@ -1091,79 +994,24 @@
 
                 const totalPixels = data.length / 4;
 
-                // LSB Replacement / Matching (standard sequential extract)
-                if (algo === "LSB Replacement / Matching") {
-                    for (let i = 0; i < data.length; i += 4) {
-                        for (let c of channels) {
-                            let bit = data[i + c] & 1;
-                            bits.push(bit);
-                            currentByte.push(bit);
-                            if (currentByte.length === 8) {
-                                let byteVal = parseInt(currentByte.join(''), 2);
-                                if (byteVal === 0) return bitsToString(bits);
-                                currentByte = [];
-                            }
-                        }
-                    }
-                }
-                // Random Path LSB
-                else if (algo === "Random Path LSB") {
-                    let seed = parseInt(param) || 42;
-                    let indices = getShuffledIndices(totalPixels, seed);
-                    for (let idx of indices) {
-                        let i = idx * 4;
-                        for (let c of channels) {
-                            let bit = data[i + c] & 1;
-                            bits.push(bit);
-                            currentByte.push(bit);
-                            if (currentByte.length === 8) {
-                                let byteVal = parseInt(currentByte.join(''), 2);
-                                if (byteVal === 0) return bitsToString(bits);
-                                currentByte = [];
-                            }
-                        }
-                    }
-                }
-                // Quantized DCT LSB
-                else if (algo === "DCT Domain LSB") {
-                    let Q = parseFloat(param) || 16.0;
-                    let width = imageData.width;
-                    let height = imageData.height;
-                    let coords = [[1, 1], [2, 1], [1, 2]];
-
-                    for (let by = 0; by < height; by += 8) {
-                        for (let bx = 0; bx < width; bx += 8) {
-                            for (let c of channels) {
-                                let block = Array.from({length: 8}, () => new Float32Array(8));
-                                for (let y = 0; y < 8; y++) {
-                                    for (let x = 0; x < 8; x++) {
-                                        let pxIdx = ((by + y) * width + (bx + x)) * 4;
-                                        block[y][x] = data[pxIdx + c];
-                                    }
-                                }
-                                
-                                let dct = dct8x8(block);
-                                for (let coord of coords) {
-                                    let u = coord[0];
-                                    let v = coord[1];
-                                    
-                                    let val = Math.round(dct[u][v] / Q);
-                                    let bit = Math.abs(val) & 1;
-                                    
-                                    bits.push(bit);
-                                    currentByte.push(bit);
-                                    if (currentByte.length === 8) {
-                                        let byteVal = parseInt(currentByte.join(''), 2);
-                                        if (byteVal === 0) return bitsToString(bits);
-                                        currentByte = [];
-                                    }
-                                }
-                            }
+                let seed = parseInt(param) || 42;
+                let indices = getShuffledIndices(totalPixels, seed);
+                for (let idx of indices) {
+                    let i = idx * 4;
+                    for (let c of channels) {
+                        let bit = data[i + c] & 1;
+                        bits.push(bit);
+                        currentByte.push(bit);
+                        if (currentByte.length === 8) {
+                            let byteVal = parseInt(currentByte.join(''), 2);
+                            if (byteVal === 0) return bitsToString(bits);
+                            currentByte = [];
                         }
                     }
                 }
                 return bitsToString(bits);
             }
+
 
             // --- Embed Sandbox Interface Hooks ---
             const covDropzone = document.getElementById('cov-dropzone');

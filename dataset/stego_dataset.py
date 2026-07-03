@@ -127,19 +127,11 @@ def generate_synthetic_dataset(data_dir="data", num_samples=100, img_size=(256, 
         cover_path = os.path.join(cover_dir, f"cover_{i:04d}.png")
         cv2.imwrite(cover_path, img)
         
-        # 2. Embed secret message to create Stego Image using a mix of algorithms and channels
+        # 2. Embed secret message to create Stego Image using ONLY Random Path LSB
         message = f"UC-DFNet_Stego_Payload_ID_{i:04d}_{generate_random_string(80)}"
-        algo = random.choice(["lsb_replacement", "lsb_matching", "random_path", "dct"])
+        key = random.randint(1, 1000)
         channels_opt = random.choice([[0, 1, 2], [0], [1], [2]])  # All, Red, Green, or Blue
-        
-        if algo == "lsb_replacement":
-            stego_img = embed_lsb(img, message, channels=channels_opt)
-        elif algo == "lsb_matching":
-            stego_img = embed_lsb_matching(img, message, channels=channels_opt)
-        elif algo == "random_path":
-            stego_img = embed_random_path(img, message, key=random.randint(1, 1000), channels=channels_opt)
-        else:
-            stego_img = embed_dct(img, message, channels=channels_opt)
+        stego_img = embed_random_path(img, message, key=key, channels=channels_opt)
         
         # Save Stego Image
         stego_path = os.path.join(stego_dir, f"stego_{i:04d}.png")
