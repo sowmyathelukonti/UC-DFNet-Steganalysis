@@ -3,1254 +3,946 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>UC-DFNet Steganalysis Portal</title>
+    <title>SENTRY-EDR: Dual-Layer Endpoint Security System</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap');
-
         :root {
-            --bg-color: #090D1A;
-            --card-bg: #111B2E;
-            --card-border: #1E293B;
-            --text-main: #F8FAFC;
-            --text-muted: #64748B;
-            --accent-blue: #0EA5E9;
-            --accent-blue-hover: #0284C7;
-            --accent-purple: #8B5CF6;
-            --accent-purple-hover: #7C3AED;
-            --accent-green: #10B981;
-            --accent-green-hover: #059669;
-            --accent-red: #EF4444;
-            --accent-red-hover: #DC2626;
-            --terminal-bg: #05070F;
+            --bg-darker: #0b0f19;
+            --bg-card: #151d30;
+            --bg-accent: #1e293b;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --color-secure: #10b981;
+            --color-warning: #f59e0b;
+            --color-alert: #ef4444;
+            --color-blue: #3b82f6;
+            --glass-border: rgba(255, 255, 255, 0.05);
         }
 
         * {
-            box-sizing: border-box;
             margin: 0;
             padding: 0;
+            box-sizing: border-box;
+            font-family: 'Outfit', sans-serif;
         }
 
         body {
-            font-family: 'Inter', sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-main);
-            line-height: 1.5;
+            background-color: var(--bg-darker);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
             overflow-x: hidden;
         }
 
+        /* Top Navigation Header */
         header {
+            background-color: var(--bg-card);
+            border-bottom: 1px solid var(--glass-border);
+            padding: 1rem 2rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 20px 40px;
-            background-color: rgba(17, 27, 46, 0.5);
-            border-bottom: 1px solid var(--card-border);
-            backdrop-filter: blur(10px);
-            flex-wrap: wrap;
-            gap: 15px;
-        }
-
-        .brand {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .brand-icon {
-            font-size: 2.2rem;
-        }
-
-        .brand-title h1 {
-            font-size: 1.4rem;
-            font-weight: 800;
-            letter-spacing: -0.5px;
-            background: linear-gradient(135deg, #0EA5E9 0%, #8B5CF6 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        .brand-title p {
-            font-size: 0.8rem;
-            color: var(--text-muted);
-        }
-
-        .server-config {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .server-config label {
-            font-size: 0.78rem;
-            font-weight: 700;
-            color: var(--text-muted);
-            text-transform: uppercase;
-        }
-
-        .server-config input {
-            background-color: var(--bg-color);
-            border: 1px solid var(--card-border);
-            color: var(--accent-blue);
-            padding: 6px 12px;
-            border-radius: 6px;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.8rem;
-            width: 250px;
-            outline: none;
-        }
-
-        .device-badge {
-            background-color: rgba(139, 92, 246, 0.15);
-            border: 1px solid rgba(139, 92, 246, 0.3);
-            color: #A78BFA;
-            font-size: 0.75rem;
-            font-weight: 700;
-            padding: 6px 12px;
-            border-radius: 6px;
-            letter-spacing: 0.5px;
-        }
-
-        .tabs-container {
-            display: flex;
-            justify-content: center;
-            border-bottom: 1px solid var(--card-border);
-            background-color: rgba(9, 13, 26, 0.8);
             position: sticky;
             top: 0;
             z-index: 100;
         }
 
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .brand i {
+            color: var(--color-blue);
+            font-size: 1.8rem;
+            filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.5));
+        }
+
+        .brand h1 {
+            font-size: 1.4rem;
+            font-weight: 600;
+            letter-spacing: 1px;
+            background: linear-gradient(to right, #60a5fa, #3b82f6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .brand span {
+            font-size: 0.75rem;
+            font-weight: 700;
+            background: rgba(59, 130, 246, 0.1);
+            color: var(--color-blue);
+            padding: 0.2rem 0.6rem;
+            border-radius: 4px;
+            border: 1px solid rgba(59, 130, 246, 0.2);
+        }
+
+        .student-badge {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--glass-border);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .student-info h3 {
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .student-info p {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        /* Main Workspace */
+        main {
+            flex: 1;
+            max-width: 1400px;
+            width: 100%;
+            margin: 2rem auto;
+            padding: 0 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        /* System Status Summary Grid */
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .stat-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        .stat-card::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+        }
+
+        .stat-card.secure::after { background-color: var(--color-secure); }
+        .stat-card.warning::after { background-color: var(--color-warning); }
+        .stat-card.alert::after { background-color: var(--color-alert); }
+        .stat-card.info::after { background-color: var(--color-blue); }
+
+        .stat-details h4 {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-details .value {
+            font-size: 1.8rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .stat-card i {
+            font-size: 2rem;
+            opacity: 0.15;
+        }
+
+        /* Tab Navigation */
+        .tabs {
+            display: flex;
+            gap: 1rem;
+            border-bottom: 1px solid var(--glass-border);
+            padding-bottom: 0.5rem;
+        }
+
         .tab-btn {
             background: none;
             border: none;
-            outline: none;
-            color: var(--text-muted);
-            font-size: 0.95rem;
-            font-weight: 600;
-            padding: 16px 24px;
+            color: var(--text-secondary);
+            font-size: 1rem;
+            font-weight: 500;
+            padding: 0.75rem 1.5rem;
             cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            border-radius: 8px;
             transition: all 0.3s ease;
-            border-bottom: 2px solid transparent;
         }
 
         .tab-btn:hover {
-            color: var(--text-main);
+            color: var(--text-primary);
+            background: rgba(255, 255, 255, 0.02);
         }
 
         .tab-btn.active {
-            color: #A78BFA;
-            border-bottom: 2px solid var(--accent-purple);
+            color: var(--text-primary);
+            background: var(--bg-card);
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
         }
 
-        main {
-            max-width: 1300px;
-            margin: 30px auto;
-            padding: 0 20px;
-        }
-
+        /* Tab Contents */
         .tab-content {
             display: none;
+            animation: fadeIn 0.4s ease-in-out forwards;
         }
 
         .tab-content.active {
-            display: block;
-            animation: fadeIn 0.4s ease-out;
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 2rem;
         }
 
+        @media (max-width: 1024px) {
+            .tab-content.active {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Cards and Sections styling */
+        .card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--glass-border);
+            padding-bottom: 0.75rem;
+        }
+
+        .card-header h2 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .card-header h2 i {
+            color: var(--color-blue);
+        }
+
+        /* Live System Log Console */
+        .console {
+            background-color: #05070c;
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            padding: 1rem;
+            height: 300px;
+            overflow-y: auto;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .console-line {
+            display: flex;
+            gap: 0.75rem;
+            line-height: 1.4;
+        }
+
+        .console-line .time { color: #64748b; }
+        .console-line .source { color: var(--color-blue); font-weight: 500; }
+        .console-line.info { color: #e2e8f0; }
+        .console-line.warn { color: var(--color-warning); }
+        .console-line.alert { color: var(--color-alert); font-weight: 500; animation: blink 1.5s infinite; }
+
+        /* Process Explorer Table */
+        .table-wrapper {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 0.85rem;
+        }
+
+        th {
+            color: var(--text-secondary);
+            font-weight: 500;
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        td {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--glass-border);
+            color: var(--text-primary);
+        }
+
+        tr:hover td {
+            background-color: rgba(255, 255, 255, 0.01);
+        }
+
+        .badge {
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .badge.secure { background: rgba(16, 185, 129, 0.1); color: var(--color-secure); border: 1px solid rgba(16, 185, 129, 0.2); }
+        .badge.warning { background: rgba(245, 158, 11, 0.1); color: var(--color-warning); border: 1px solid rgba(245, 158, 11, 0.2); }
+        .badge.critical { background: rgba(239, 68, 115, 0.1); color: var(--color-alert); border: 1px solid rgba(239, 68, 115, 0.2); }
+        .badge.terminated { background: rgba(148, 163, 184, 0.1); color: var(--text-secondary); border: 1px solid rgba(148, 163, 184, 0.2); }
+
+        .btn {
+            background-color: var(--color-blue);
+            color: var(--text-primary);
+            border: none;
+            border-radius: 6px;
+            padding: 0.4rem 0.8rem;
+            font-size: 0.8rem;
+            font-weight: 500;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            transition: all 0.3s ease;
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        .btn.danger {
+            background-color: var(--color-alert);
+        }
+
+        .btn.secondary {
+            background-color: transparent;
+            border: 1px solid var(--glass-border);
+        }
+
+        .btn.secondary:hover {
+            background-color: rgba(255, 255, 255, 0.03);
+        }
+
+        /* Controls Block */
+        .simulation-box {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            background: rgba(59, 130, 246, 0.02);
+            border: 1px dashed rgba(59, 130, 246, 0.2);
+            border-radius: 8px;
+            padding: 1.25rem;
+        }
+
+        .simulation-box p {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            line-height: 1.4;
+        }
+
+        /* Deception Sandbox Styles */
+        .directory-view {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            background-color: #05070c;
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            padding: 1rem;
+            height: 220px;
+            overflow-y: auto;
+        }
+
+        .dir-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            padding: 0.25rem 0;
+        }
+
+        .dir-item.decoy {
+            color: var(--color-warning);
+            font-weight: 500;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .form-group label {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+        }
+
+        .form-group input, .form-group select {
+            background-color: #05070c;
+            border: 1px solid var(--glass-border);
+            border-radius: 6px;
+            padding: 0.5rem;
+            color: var(--text-primary);
+            font-size: 0.85rem;
+        }
+
+        /* Risk Decision Engine Visuals */
+        .diagram-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            padding: 2rem;
+            background-color: #05070c;
+        }
+
+        /* Animations */
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
         }
 
-        .grid-2 {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 30px;
-        }
-
-        @media (max-width: 900px) {
-            .grid-2 {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        .card {
-            background-color: var(--card-bg);
-            border: 1px solid var(--card-border);
-            border-radius: 16px;
-            padding: 30px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-        }
-
-        .card-title {
-            font-size: 1.25rem;
-            font-weight: 700;
-            margin-bottom: 8px;
-            color: var(--text-main);
-        }
-
-        .card-subtitle {
-            font-size: 0.85rem;
-            color: var(--text-muted);
-            margin-bottom: 25px;
-        }
-
-        /* Upload Dropzone styling */
-        .dropzone {
-            border: 2px dashed var(--card-border);
-            border-radius: 12px;
-            padding: 40px 20px;
-            text-align: center;
-            background-color: rgba(9, 13, 26, 0.4);
-            cursor: pointer;
-            transition: all 0.3s ease;
-            min-height: 280px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            gap: 15px;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .dropzone:hover {
-            border-color: var(--accent-blue);
-            background-color: rgba(9, 13, 26, 0.6);
-        }
-
-        .dropzone-icon {
-            font-size: 2.5rem;
-            color: var(--text-muted);
-        }
-
-        .dropzone-text {
-            font-size: 0.95rem;
-            font-weight: 500;
-        }
-
-        .dropzone-subtext {
-            font-size: 0.8rem;
-            color: var(--text-muted);
-        }
-
-        .preview-img {
-            max-width: 100%;
-            max-height: 250px;
-            border-radius: 8px;
-            object-fit: contain;
-        }
-
-        input[type="file"] {
-            display: none;
-        }
-
-        /* Buttons */
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            padding: 12px 24px;
-            border: none;
-            border-radius: 8px;
-            font-size: 0.95rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            width: 100%;
-            gap: 8px;
-        }
-
-        .btn:active {
-            transform: scale(0.98);
-        }
-
-        .btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        .btn-primary {
-            background-color: var(--accent-blue);
-            color: white;
-        }
-
-        .btn-primary:hover:not(:disabled) {
-            background-color: var(--accent-blue-hover);
-        }
-
-        .btn-success {
-            background-color: var(--accent-green);
-            color: white;
-        }
-
-        .btn-success:hover:not(:disabled) {
-            background-color: var(--accent-green-hover);
-        }
-
-        .btn-danger {
-            background-color: var(--accent-red);
-            color: white;
-        }
-
-        .btn-danger:hover:not(:disabled) {
-            background-color: var(--accent-red-hover);
-        }
-
-        /* Result panel styling */
-        .result-box {
-            background-color: rgba(9, 13, 26, 0.4);
-            border: 1px solid var(--card-border);
-            border-radius: 12px;
-            padding: 25px;
-            text-align: center;
-            margin-bottom: 25px;
-            transition: all 0.3s ease;
-        }
-
-        .result-heading {
-            font-size: 0.85rem;
-            font-weight: 700;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 10px;
-        }
-
-        .result-status {
-            font-size: 1.6rem;
-            font-weight: 800;
-            margin-bottom: 8px;
-        }
-
-        .result-conf {
-            font-size: 0.95rem;
-            color: var(--text-muted);
-        }
-
-        .result-box.clean {
-            border-color: rgba(16, 185, 129, 0.3);
-            background-color: rgba(16, 185, 129, 0.08);
-        }
-
-        .result-box.clean .result-status {
-            color: var(--accent-green);
-        }
-
-        .result-box.stego {
-            border-color: rgba(239, 68, 68, 0.3);
-            background-color: rgba(239, 68, 68, 0.08);
-        }
-
-        .result-box.stego .result-status {
-            color: var(--accent-red);
-        }
-
-        .result-overlay-box {
-            text-align: center;
-        }
-
-        .result-overlay-title {
-            font-size: 0.95rem;
-            font-weight: 600;
-            margin-bottom: 12px;
-            text-align: left;
-        }
-
-        .overlay-container {
-            border-radius: 12px;
-            border: 1px solid var(--card-border);
-            background-color: rgba(9, 13, 26, 0.4);
-            min-height: 250px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            overflow: hidden;
-        }
-
-        .overlay-container img {
-            max-width: 100%;
-            max-height: 300px;
-            object-fit: contain;
-        }
-
-        /* Forms styling */
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        label {
-            display: block;
-            font-size: 0.9rem;
-            font-weight: 600;
-            margin-bottom: 8px;
-            color: var(--text-main);
-        }
-
-        select, input[type="text"], input[type="number"], .form-control {
-            width: 100%;
-            padding: 10px 14px;
-            background-color: var(--bg-color);
-            border: 1px solid var(--card-border);
-            border-radius: 8px;
-            color: var(--text-main);
-            font-family: inherit;
-            font-size: 0.95rem;
-            outline: none;
-            transition: border-color 0.2s ease;
-        }
-
-        select:focus, input[type="text"]:focus, input[type="number"]:focus {
-            border-color: var(--accent-purple);
-        }
-
-        /* Console Terminals */
-        .console-box {
-            background-color: var(--terminal-bg);
-            border: 1px solid var(--card-border);
-            border-radius: 10px;
-            padding: 15px;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.85rem;
-            color: #38BDF8;
-            height: 320px;
-            overflow-y: auto;
-            white-space: pre-wrap;
-            word-break: break-all;
-        }
-
-        .console-box.stego-text {
-            color: var(--accent-green);
-            height: 80px;
-        }
-
-        .console-box::-webkit-scrollbar {
-            width: 8px;
-        }
-
-        .console-box::-webkit-scrollbar-track {
-            background: var(--terminal-bg);
-        }
-
-        .console-box::-webkit-scrollbar-thumb {
-            background: var(--card-border);
-            border-radius: 4px;
-        }
-
-        .console-box::-webkit-scrollbar-thumb:hover {
-            background: var(--text-muted);
-        }
-
-        .progress-container {
-            margin-top: 15px;
-            margin-bottom: 25px;
-        }
-
-        .progress-bar-bg {
-            background-color: var(--card-border);
-            height: 6px;
-            border-radius: 3px;
-            overflow: hidden;
-        }
-
-        .progress-bar-fill {
-            background: linear-gradient(90deg, var(--accent-purple) 0%, var(--accent-blue) 100%);
-            width: 0%;
-            height: 100%;
-            transition: width 0.3s ease;
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
         }
     </style>
 </head>
 <body>
 
-    <!-- Header Branding Banner -->
+    <!-- Header -->
     <header>
         <div class="brand">
-            <div class="brand-icon">🛡️</div>
-            <div class="brand-title">
-                <h1>UC-DFNet Steganalysis Portal</h1>
-                <p>Specialized Random Path LSB Steganalysis & Visual Interpretability Portal</p>
+            <i class="fa-solid fa-shield-halved"></i>
+            <div>
+                <h1>SENTRY-EDR</h1>
+                <p style="font-size: 0.7rem; color: var(--text-secondary);">DUAL-LAYER ENDPOINT SECURITY</p>
+            </div>
+            <span>V1.0</span>
+        </div>
+        <div class="student-badge">
+            <div class="student-info" style="text-align: right;">
+                <h3>Thelukonti Sowmya</h3>
+                <p>25011DA816 | M.Tech (CFIS)</p>
+            </div>
+            <div class="student-info" style="border-left: 1px solid var(--glass-border); padding-left: 1rem;">
+                <h3>Dr. R. Sridevi</h3>
+                <p>Project Guide</p>
             </div>
         </div>
-        
-        <!-- API Configurator for Static deployment -->
-        <div class="server-config">
-            <label for="backend-url">Backend Server:</label>
-            <input type="text" id="backend-url" value="http://127.0.0.1:5000" placeholder="e.g. https://your-server.onrender.com">
-        </div>
-        <div class="device-badge" id="device-badge">DEVICE: OFFLINE</div>
     </header>
 
-    <!-- Sticky Tab Navigation -->
-    <div class="tabs-container">
-        <button class="tab-btn active" data-tab="steganalysis-tab">🔍 Steganalysis Dashboard</button>
-        <button class="tab-btn" data-tab="sandbox-tab">🎨 Random Path Sandbox (Client-Side)</button>
-    </div>
-
-    <!-- Main Content Container -->
     <main>
-        
-        <!-- ================== TAB 1: STEGANALYSIS ================== -->
-        <div class="tab-content active" id="steganalysis-tab">
-            <div class="grid-2">
-                
-                <!-- Left Panel: Select and Preview Cover/Stego -->
-                <div class="card">
-                    <div class="card-title">1. Select Input Image</div>
-                    <div class="card-subtitle">Choose a color image file to scan for hidden key-based Random Path LSB stego payloads.</div>
-                    
-                    <div class="dropzone" id="scan-dropzone">
-                        <div id="scan-dropzone-inner">
-                            <div class="dropzone-icon">📁</div>
-                            <div class="dropzone-text">Click to choose or Drag & Drop image here</div>
-                            <div class="dropzone-subtext">Supports PNG, JPG, JPEG, BMP</div>
-                        </div>
-                        <img id="scan-preview" class="preview-img" style="display: none;" alt="Scan Preview">
-                        <input type="file" id="scan-file-input" accept="image/*">
-                    </div>
-                    
-                    <div style="margin-top: 25px;">
-                        <button class="btn btn-primary" id="btn-scan" disabled>🔎 Run UC-DFNet Steganalysis</button>
-                    </div>
+        <!-- System Status summaries -->
+        <div class="summary-grid">
+            <div class="stat-card secure" id="card-threat">
+                <div class="stat-details">
+                    <h4>Threat Risk Level</h4>
+                    <div class="value" id="threat-score">0%</div>
                 </div>
-                
-                <!-- Right Panel: Results & Grad-CAM -->
-                <div class="card">
-                    <div class="card-title">2. Detection Results</div>
-                    <div class="card-subtitle">Model inference outputs and visual explainability.</div>
-                    
-                    <!-- Result Box -->
-                    <div class="result-box" id="scan-result-box" style="display: none;">
-                        <div class="result-heading">Detection Status</div>
-                        <div class="result-status" id="scan-result-status">🛡️ CLEAN IMAGE</div>
-                        <div class="result-conf" id="scan-result-conf">Inference Confidence: 99.87%</div>
-                    </div>
-                    
-                    <!-- Grad-CAM Display -->
-                    <div class="result-overlay-box">
-                        <div class="result-overlay-title">Grad-CAM Spatial Explainability Heatmap:</div>
-                        <div class="overlay-container">
-                            <span id="gradcam-placeholder-text" style="color: var(--text-muted); font-size: 0.9rem;">
-                                Heatmap overlay will render here after scanning
-                            </span>
-                            <img id="gradcam-img" style="display: none;" alt="Gradcam Overlay">
-                        </div>
-                    </div>
-                </div>
-                
+                <i class="fa-solid fa-triangle-exclamation"></i>
             </div>
-            
-            <!-- Intermediate Features Section -->
-            <div class="card" id="features-container" style="margin-top: 30px; display: none;">
-                <div class="card-title">3. Stage 1 Dual-Path Enhancement Block Activations</div>
-                <div class="card-subtitle">Visualizes the first 16 feature extraction channel activations.</div>
-                <div class="overlay-container" style="min-height: 200px;">
-                    <span id="features-placeholder-text" style="color: var(--text-muted); font-size: 0.9rem;">
-                        Features mapping will render here
-                    </span>
-                    <img id="features-img" style="display: none; max-height: 400px; width: 100%; object-fit: contain;" alt="Feature Activations">
+            <div class="stat-card info" id="card-status">
+                <div class="stat-details">
+                    <h4>EDR Engine Status</h4>
+                    <div class="value" id="engine-status">Active</div>
+                </div>
+                <i class="fa-solid fa-heartbeat"></i>
+            </div>
+            <div class="stat-card secure" id="card-decoys">
+                <div class="stat-details">
+                    <h4>Decoys Status</h4>
+                    <div class="value" id="compromised-count">3/3 Safe</div>
+                </div>
+                <i class="fa-solid fa-spider"></i>
+            </div>
+            <div class="stat-card info" id="card-processes">
+                <div class="stat-details">
+                    <h4>Monitored Tasks</h4>
+                    <div class="value" id="process-count">5 Running</div>
+                </div>
+                <i class="fa-solid fa-microchip"></i>
+            </div>
+        </div>
+
+        <!-- Tab Links -->
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('tab-monitor', this)"><i class="fa-solid fa-chart-line"></i> Real-Time Monitor</button>
+            <button class="tab-btn" onclick="switchTab('tab-decoys', this)"><i class="fa-solid fa-spider"></i> Deception Sandbox</button>
+            <button class="tab-btn" onclick="switchTab('tab-engine', this)"><i class="fa-solid fa-gears"></i> Risk Decision Engine</button>
+        </div>
+
+        <!-- TAB 1: Monitor -->
+        <div id="tab-monitor" class="tab-content active">
+            <!-- Left Side: Table & Terminal -->
+            <div style="display: flex; flex-direction: column; gap: 2rem;">
+                <div class="card">
+                    <div class="card-header">
+                        <h2><i class="fa-solid fa-table-list"></i> Monitored Processes Explorer</h2>
+                        <span style="font-size: 0.8rem; color: var(--text-secondary);">Real-time CPU and Shannon Entropy calculation</span>
+                    </div>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>PID</th>
+                                    <th>Process Name</th>
+                                    <th>CPU Usage</th>
+                                    <th>Disk Write Rate</th>
+                                    <th>Shannon Entropy</th>
+                                    <th>Threat Level</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="process-table">
+                                <!-- Loaded dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h2><i class="fa-solid fa-terminal"></i> Live Security Log Feed</h2>
+                        <button class="btn secondary" onclick="clearLogs()"><i class="fa-solid fa-trash"></i> Clear</button>
+                    </div>
+                    <div class="console" id="console-logs">
+                        <!-- Loaded dynamically -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Side: Simulation Control Panel -->
+            <div style="display: flex; flex-direction: column; gap: 2rem;">
+                <div class="card">
+                    <div class="card-header">
+                        <h2><i class="fa-solid fa-bug"></i> Threat Simulator</h2>
+                    </div>
+                    <div class="simulation-box">
+                        <p>Simulate a zero-day ransomware intrusion (e.g. Wanacry). The EDR monitor checks write Shannon entropy, and Deception engine listens to Honeytoken folders.</p>
+                        <button class="btn danger" onclick="triggerSimulation()"><i class="fa-solid fa-play"></i> Attack Simulation</button>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <h2><i class="fa-solid fa-sliders"></i> Entropy Alarm Limit</h2>
+                    </div>
+                    <div class="form-group">
+                        <label for="threshold-slider">Shannon Entropy Threshold: <span id="threshold-val">6.50</span></label>
+                        <input type="range" id="threshold-slider" min="3.0" max="8.0" step="0.1" value="6.5" oninput="updateThreshold(this.value)">
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- ================== TAB 2: STEGANOGRAPHY SANDBOX ================== -->
-        <div class="tab-content" id="sandbox-tab">
-            <div class="grid-2">
-                
-                <!-- Left Column: Embed Message (Client-Side Canvas) -->
+        <!-- TAB 2: Deception Sandbox -->
+        <div id="tab-decoys" class="tab-content">
+            <!-- Left Side: Honeytokens Deployment -->
+            <div style="display: flex; flex-direction: column; gap: 2rem;">
                 <div class="card">
-                    <div class="card-title">🔒 Embed Message</div>
-                    <div class="card-subtitle">Inject secret text into a cover image using local JavaScript processing.</div>
-                    
-                    <div class="dropzone" id="cov-dropzone" style="min-height: 180px; padding: 20px 10px;">
-                        <div id="cov-dropzone-inner">
-                            <div class="dropzone-icon" style="font-size: 1.8rem;">📁</div>
-                            <div class="dropzone-text" style="font-size: 0.85rem;">Click to choose Cover Image (PNG)</div>
-                        </div>
-                        <img id="cov-preview" class="preview-img" style="display: none; max-height: 140px;" alt="Cover Preview">
-                        <input type="file" id="cov-file-input" accept="image/*">
+                    <div class="card-header">
+                        <h2><i class="fa-solid fa-list-check"></i> Active Deployed Honeytokens</h2>
                     </div>
-                    
-                    <div class="form-group" style="margin-top: 15px;">
-                        <label for="embed-algo">Embedding Method:</label>
-                        <input type="text" id="embed-algo" value="Random Path LSB" readonly class="form-control" style="background-color: var(--card-bg); color: var(--accent-purple); font-weight: bold; border-color: var(--card-border);">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="embed-channels">Color Channels:</label>
-                        <select id="embed-channels">
-                            <option value="All Channels (RGB)">All Channels (RGB)</option>
-                            <option value="Red Channel Only">Red Channel Only</option>
-                            <option value="Green Channel Only">Green Channel Only</option>
-                            <option value="Blue Channel Only">Blue Channel Only</option>
-                        </select>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="embed-param">Secret Key (PRNG Seed):</label>
-                        <input type="number" id="embed-param" value="42" min="1">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="embed-message">Message to Hide:</label>
-                        <input type="text" id="embed-message" value="Universal stego message! 🤫">
-                    </div>
-                    
-                    <button class="btn btn-success" id="btn-embed" disabled>🔒 Embed Message (Canvas)</button>
-                    
-                    <!-- Download Box -->
-                    <div class="result-box clean" id="embed-result-box" style="display: none; margin-top: 20px; padding: 15px;">
-                        <div style="font-size: 0.85rem; font-weight: 700; color: var(--accent-green); margin-bottom: 10px;">Stego Output Ready!</div>
-                        <button class="btn btn-primary" id="btn-download-stego">💾 Download Stego Image</button>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Decoy Name</th>
+                                    <th>File Path</th>
+                                    <th>Decoy Type</th>
+                                    <th>Size</th>
+                                    <th>Status</th>
+                                    <th>Simulation</th>
+                                </tr>
+                            </thead>
+                            <tbody id="decoys-table">
+                                <!-- Loaded dynamically -->
+                            </tbody>
+                        </table>
                     </div>
                 </div>
-                
-                <!-- Right Column: Extract Message -->
+
                 <div class="card">
-                    <div class="card-title">🔑 Extract Message</div>
-                    <div class="card-subtitle">Decode hidden text embedded inside a stego image locally.</div>
-                    
-                    <div class="dropzone" id="steg-dropzone" style="min-height: 180px; padding: 20px 10px;">
-                        <div id="steg-dropzone-inner">
-                            <div class="dropzone-icon" style="font-size: 1.8rem;">📁</div>
-                            <div class="dropzone-text" style="font-size: 0.85rem;">Click to choose Stego Image (PNG)</div>
+                    <div class="card-header">
+                        <h2><i class="fa-solid fa-square-plus"></i> Deploy New Decoy Honeytoken</h2>
+                    </div>
+                    <form id="deploy-form" onsubmit="deployDecoy(event)" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <div class="form-group">
+                            <label>File Name</label>
+                            <input type="text" id="decoy-name" placeholder="e.g. db_backup.sql" required>
                         </div>
-                        <img id="steg-preview" class="preview-img" style="display: none; max-height: 140px;" alt="Stego Preview">
-                        <input type="file" id="steg-file-input" accept="image/*">
-                    </div>
-                    
-                    <div class="form-group" style="margin-top: 15px;">
-                        <label for="extract-algo">Expected Method:</label>
-                        <input type="text" id="extract-algo" value="Random Path LSB" readonly class="form-control" style="background-color: var(--card-bg); color: var(--accent-purple); font-weight: bold; border-color: var(--card-border);">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="extract-channels">Expected Channels:</label>
-                        <select id="extract-channels">
-                            <option value="All Channels (RGB)">All Channels (RGB)</option>
-                            <option value="Red Channel Only">Red Channel Only</option>
-                            <option value="Green Channel Only">Green Channel Only</option>
-                            <option value="Blue Channel Only">Blue Channel Only</option>
-                        </select>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="extract-param">Secret Key (PRNG Seed):</label>
-                        <input type="number" id="extract-param" value="42" min="1">
-                    </div>
-                    
-                    <button class="btn btn-danger" id="btn-extract" disabled>🔓 Extract Message</button>
-                    
-                    <!-- Output message console -->
-                    <div style="margin-top: 25px;">
-                        <label>Extracted Secret Message:</label>
-                        <div class="console-box stego-text" id="extracted-message-console">
-                            Awaiting payload extraction...
+                        <div class="form-group">
+                            <label>File Path</label>
+                            <input type="text" id="decoy-path" placeholder="e.g. C:\Users\hp 4021\Documents\db_backup.sql" required>
                         </div>
+                        <div class="form-group">
+                            <label>Decoy File Type</label>
+                            <select id="decoy-type">
+                                <option value="Text Decoy">Text Decoy (passwords, accounts)</option>
+                                <option value="Spreadsheet Decoy">Spreadsheet Decoy (financial, budgets)</option>
+                                <option value="Database Decoy">Database Decoy (backup, logs)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Decoy File Size</label>
+                            <input type="text" id="decoy-size" placeholder="e.g. 1.2 MB">
+                        </div>
+                        <button type="submit" class="btn" style="grid-column: span 2; margin-top: 1rem;"><i class="fa-solid fa-cloud-arrow-up"></i> Deploy Decoy</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Right Side: Directory Structure simulation -->
+            <div style="display: flex; flex-direction: column; gap: 2rem;">
+                <div class="card">
+                    <div class="card-header">
+                        <h2><i class="fa-solid fa-folder-open"></i> Simulated Endpoint Folders</h2>
+                    </div>
+                    <div class="directory-view" id="directory-tree">
+                        <div class="dir-item"><i class="fa-solid fa-folder"></i> C:\Users\hp 4021</div>
+                        <div class="dir-item" style="padding-left: 1rem;"><i class="fa-solid fa-folder"></i> Documents</div>
+                        <div class="dir-item decoy" style="padding-left: 2rem;"><i class="fa-solid fa-file-shield"></i> passwords.txt <span style="font-size: 0.7rem;">(Decoy)</span></div>
+                        <div class="dir-item" style="padding-left: 1rem;"><i class="fa-solid fa-folder"></i> Desktop</div>
+                        <div class="dir-item decoy" style="padding-left: 2rem;"><i class="fa-solid fa-file-shield"></i> financial_records.xlsx <span style="font-size: 0.7rem;">(Decoy)</span></div>
+                        <div class="dir-item" style="padding-left: 1rem;"><i class="fa-solid fa-folder"></i> AppData</div>
+                        <div class="dir-item decoy" style="padding-left: 2rem;"><i class="fa-solid fa-file-shield"></i> db_backup.sql <span style="font-size: 0.7rem;">(Decoy)</span></div>
                     </div>
                 </div>
-                
             </div>
         </div>
 
+        <!-- TAB 3: Risk Decision Engine -->
+        <div id="tab-engine" class="tab-content">
+            <div class="card" style="grid-column: span 2;">
+                <div class="card-header">
+                    <h2><i class="fa-solid fa-diagram-project"></i> Dual-Layer Risk Decision Correlation flow</h2>
+                </div>
+                <div class="diagram-container">
+                    <svg width="600" height="280" viewBox="0 0 600 280">
+                        <!-- Layer 1 box -->
+                        <rect x="20" y="20" width="200" height="70" rx="6" fill="#1e293b" stroke="#3b82f6" stroke-width="2" />
+                        <text x="120" y="45" fill="#f8fafc" font-size="12" font-weight="600" text-anchor="middle">LAYER 1: BEHAVIORAL</text>
+                        <text x="120" y="65" fill="#94a3b8" font-size="10" text-anchor="middle">Shannon Entropy checks (> 6.5)</text>
 
+                        <!-- Layer 2 box -->
+                        <rect x="20" y="160" width="200" height="70" rx="6" fill="#1e293b" stroke="#f59e0b" stroke-width="2" />
+                        <text x="120" y="185" fill="#f8fafc" font-size="12" font-weight="600" text-anchor="middle">LAYER 2: DECEPTION</text>
+                        <text x="120" y="205" fill="#94a3b8" font-size="10" text-anchor="middle">Honeytoken decoy alerts</text>
 
+                        <!-- Connector lines -->
+                        <path d="M 220 55 L 340 120" stroke="#3b82f6" stroke-width="2" fill="none" marker-end="url(#arrow)" />
+                        <path d="M 220 195 L 340 130" stroke="#f59e0b" stroke-width="2" fill="none" marker-end="url(#arrow)" />
+
+                        <!-- Decision box -->
+                        <rect x="350" y="90" width="200" height="70" rx="6" fill="#ef4444" stroke="#f8fafc" stroke-width="1.5" />
+                        <text x="450" y="115" fill="#f8fafc" font-size="12" font-weight="600" text-anchor="middle">RISK DECISION ENGINE</text>
+                        <text x="450" y="135" fill="#f8fafc" font-size="9" text-anchor="middle">Process Termination & Alerting</text>
+
+                        <!-- Legend/Markers -->
+                        <defs>
+                            <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                                <path d="M 0 0 L 10 5 L 0 10 z" fill="#f8fafc" />
+                            </marker>
+                        </defs>
+                    </svg>
+                </div>
+                <div style="font-size: 0.9rem; line-height: 1.6; color: var(--text-secondary);">
+                    <p><strong>Correlated Decision Rules:</strong></p>
+                    <p>• If a process attempts to access a deployed **Honeytoken Decoy** (Layer 2), the system assigns it a threat score of **45%** and triggers a silent administrator warning.</p>
+                    <p>• If a process exhibits **abnormal write Shannon entropy** above the threshold (Layer 1), the system immediately marks it as **Critical** and issues a termination call.</p>
+                    <p>• Together, the two layers guarantee that zero-day ransomware cannot execute mass file encryption undetected, minimizing both false positives and detection latency.</p>
+                </div>
+            </div>
+        </div>
     </main>
 
-    <!-- Canvas element used purely for image processing computations (not displayed) -->
-    <canvas id="hidden-canvas" style="display: none;"></canvas>
-
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            // Get configurable Backend API URL
-            const backendInput = document.getElementById('backend-url');
-            
-            // Auto update URL if index.html is hosted directly on a server,
-            // otherwise default to localhost:5000 if opened as a file.
-            if (window.location.protocol.startsWith('http') && !window.location.host.includes('127.0.0.1')) {
-                backendInput.value = window.location.origin;
-            }
-
-            function getApiUrl() {
-                return backendInput.value.replace(/\/$/, "");
-            }
-
-            // Fetch active backend status
-            function updateDeviceBadge() {
-                const apiBase = getApiUrl();
-                fetch(`${apiBase}/api/device`)
-                    .then(res => res.json())
-                    .then(data => {
-                        const badge = document.getElementById('device-badge');
-                        badge.innerText = `DEVICE: ${data.device}`;
-                        badge.style.backgroundColor = "rgba(16, 185, 129, 0.15)";
-                        badge.style.borderColor = "rgba(16, 185, 129, 0.3)";
-                        badge.style.color = "#34D399";
-                    })
-                    .catch(err => {
-                        const badge = document.getElementById('device-badge');
-                        badge.innerText = `DEVICE: BROWSER ENGINE`;
-                        badge.style.backgroundColor = "rgba(16, 185, 129, 0.15)";
-                        badge.style.borderColor = "rgba(16, 185, 129, 0.3)";
-                        badge.style.color = "#34D399";
-                    });
-            }
-            
-            updateDeviceBadge();
-            backendInput.addEventListener('change', updateDeviceBadge);
-            setInterval(updateDeviceBadge, 8000);
-
-            // ------------------ TAB SYSTEM ------------------
-            const tabs = document.querySelectorAll('.tab-btn');
+        function switchTab(tabId, btn) {
+            // Hide all tab contents
             const contents = document.querySelectorAll('.tab-content');
+            contents.forEach(content => {
+                content.classList.remove('active');
+                content.style.display = 'none';
+            });
 
-            tabs.forEach(tab => {
-                tab.addEventListener('click', () => {
-                    tabs.forEach(t => t.classList.remove('active'));
-                    contents.forEach(c => c.classList.remove('active'));
+            // Deactivate all tab buttons
+            const btns = document.querySelectorAll('.tab-btn');
+            btns.forEach(b => b.classList.remove('active'));
 
-                    tab.classList.add('active');
-                    const target = tab.getAttribute('data-tab');
-                    document.getElementById(target).classList.add('active');
+            // Show selected tab content
+            const activeTab = document.getElementById(tabId);
+            activeTab.style.display = (tabId === 'tab-engine') ? 'block' : 'grid';
+            activeTab.classList.add('active');
+            
+            // Activate current button
+            btn.classList.add('active');
+        }
+
+        // Real-Time Polling & Update Functions
+        async function fetchStatus() {
+            try {
+                const res = await fetch('/api/status');
+                const data = await res.json();
+                
+                // Update widgets
+                const threatVal = document.getElementById('threat-score');
+                const engineVal = document.getElementById('engine-status');
+                const decoyVal = document.getElementById('compromised-count');
+                const processVal = document.getElementById('process-count');
+                
+                threatVal.textContent = `${data.threat_score}%`;
+                
+                // Colorize threat card
+                const threatCard = document.getElementById('card-threat');
+                threatCard.className = "stat-card";
+                if (data.threat_score >= 75) {
+                    threatCard.classList.add('alert');
+                } else if (data.threat_score >= 35) {
+                    threatCard.classList.add('warning');
+                } else {
+                    threatCard.classList.add('secure');
+                }
+
+                // Deployed decoys status
+                if (data.compromised_decoys > 0) {
+                    decoyVal.textContent = `${data.compromised_decoys} Compromised`;
+                    document.getElementById('card-decoys').className = "stat-card alert";
+                } else {
+                    decoyVal.textContent = "3/3 Safe";
+                    document.getElementById('card-decoys').className = "stat-card secure";
+                }
+
+                // Active process count
+                processVal.textContent = `${data.active_processes} Running`;
+                
+                // Slider value sync
+                document.getElementById('threshold-val').textContent = parseFloat(data.entropy_threshold).toFixed(2);
+                document.getElementById('threshold-slider').value = data.entropy_threshold;
+
+            } catch (err) {
+                console.error("Failed to fetch EDR engine status.", err);
+            }
+        }
+
+        async function fetchProcesses() {
+            try {
+                const res = await fetch('/api/processes');
+                const list = await res.json();
+                
+                const tbody = document.getElementById('process-table');
+                tbody.innerHTML = '';
+                
+                list.forEach(p => {
+                    let badgeClass = "secure";
+                    if (p.risk === "Critical") badgeClass = "critical";
+                    else if (p.risk === "Medium") badgeClass = "warning";
+                    else if (p.risk === "Terminated") badgeClass = "terminated";
+                    
+                    let row = `
+                        <tr>
+                            <td>${p.pid}</td>
+                            <td style="font-weight: 500;">${p.name}</td>
+                            <td>${p.cpu}%</td>
+                            <td>${p.io_rate}</td>
+                            <td>${parseFloat(p.entropy).toFixed(2)}</td>
+                            <td><span class="badge ${badgeClass}">${p.risk}</span></td>
+                            <td>
+                                ${p.status === "Running" ? 
+                                `<button class="btn danger" onclick="terminateProcess(${p.pid})"><i class="fa-solid fa-power-off"></i> Kill</button>` : 
+                                `<span style="color: var(--text-secondary); font-size: 0.8rem;">Terminated</span>`}
+                            </td>
+                        </tr>
+                    `;
+                    tbody.innerHTML += row;
                 });
-            });
-
-            // ------------------ STEGANALYSIS TAB (Server requests) ------------------
-            const scanDropzone = document.getElementById('scan-dropzone');
-            const scanInput = document.getElementById('scan-file-input');
-            const scanPreview = document.getElementById('scan-preview');
-            const btnScan = document.getElementById('btn-scan');
-            
-            const scanResultBox = document.getElementById('scan-result-box');
-            const scanResultStatus = document.getElementById('scan-result-status');
-            const scanResultConf = document.getElementById('scan-result-conf');
-            const gradcamImg = document.getElementById('gradcam-img');
-            const featuresImg = document.getElementById('features-img');
-            const featuresContainer = document.getElementById('features-container');
-
-            scanDropzone.addEventListener('click', () => scanInput.click());
-
-            scanInput.addEventListener('change', (e) => {
-                const file = e.target.files[0];
-                if (file) {
-                    const reader = new FileReader();
-                    reader.onload = (event) => {
-                        scanPreview.src = event.target.result;
-                        scanPreview.style.display = 'block';
-                        document.getElementById('scan-dropzone-inner').style.display = 'none';
-                        btnScan.disabled = false;
-                    };
-                    reader.readAsDataURL(file);
-                }
-            });
-
-            function runClientSideSteganalysis(imageData) {
-                let data = imageData.data;
-                let width = imageData.width;
-                let height = imageData.height;
-                
-                let transitions = 0;
-                let totalPairs = 0;
-                
-                // Calculate transitions horizontally and vertically for RGB channels
-                for (let y = 0; y < height; y++) {
-                    for (let x = 0; x < width; x++) {
-                        let idx = (y * width + x) * 4;
-                        
-                        // Horizontal neighbor
-                        if (x < width - 1) {
-                            let nextIdx = (y * width + (x + 1)) * 4;
-                            for (let c = 0; c < 3; c++) {
-                                transitions += Math.abs((data[idx + c] & 1) - (data[nextIdx + c] & 1));
-                                totalPairs++;
-                            }
-                        }
-                        
-                        // Vertical neighbor
-                        if (y < height - 1) {
-                            let nextIdx = ((y + 1) * width + x) * 4;
-                            for (let c = 0; c < 3; c++) {
-                                transitions += Math.abs((data[idx + c] & 1) - (data[nextIdx + c] & 1));
-                                totalPairs++;
-                            }
-                        }
-                    }
-                }
-                
-                let rate = transitions / totalPairs;
-                let isStego = rate >= 0.468;
-                
-                let heatCanvas = document.createElement('canvas');
-                heatCanvas.width = width;
-                heatCanvas.height = height;
-                let heatCtx = heatCanvas.getContext('2d');
-                
-                let tempCanvas = document.createElement('canvas');
-                tempCanvas.width = width;
-                tempCanvas.height = height;
-                let tempCtx = tempCanvas.getContext('2d');
-                tempCtx.putImageData(imageData, 0, 0);
-                heatCtx.drawImage(tempCanvas, 0, 0);
-                
-                heatCtx.fillStyle = 'rgba(239, 68, 68, 0.45)'; 
-                let bitplaneData = tempCtx.createImageData(width, height);
-                
-                let blockSize = 16;
-                let cols = Math.floor(width / blockSize);
-                let rows = Math.floor(height / blockSize);
-                
-                for (let r = 0; r < rows; r++) {
-                    for (let c = 0; c < cols; c++) {
-                        let blockTransitions = 0;
-                        let blockPairs = 0;
-                        
-                        for (let y = 0; y < blockSize; y++) {
-                            for (let x = 0; x < blockSize; x++) {
-                                let pxX = c * blockSize + x;
-                                let pxY = r * blockSize + y;
-                                let idx = (pxY * width + pxX) * 4;
-                                
-                                if (idx < data.length) {
-                                    let rLsb = data[idx] & 1;
-                                    let gLsb = data[idx + 1] & 1;
-                                    let bLsb = data[idx + 2] & 1;
-                                    
-                                    let bpIdx = (pxY * width + pxX) * 4;
-                                    let val = (rLsb || gLsb || bLsb) ? 255 : 0;
-                                    bitplaneData.data[bpIdx] = val;
-                                    bitplaneData.data[bpIdx+1] = val;
-                                    bitplaneData.data[bpIdx+2] = val;
-                                    bitplaneData.data[bpIdx+3] = 255;
-                                    
-                                    if (pxX < width - 1) {
-                                        let nextIdx = (pxY * width + (pxX + 1)) * 4;
-                                        blockTransitions += Math.abs(rLsb - (data[nextIdx] & 1)) + Math.abs(gLsb - (data[nextIdx+1] & 1)) + Math.abs(bLsb - (data[nextIdx+2] & 1));
-                                        blockPairs += 3;
-                                    }
-                                }
-                            }
-                        }
-                        
-                        let blockRate = blockTransitions / blockPairs;
-                        if (blockRate > 0.482 && isStego) {
-                            heatCtx.fillRect(c * blockSize, r * blockSize, blockSize, blockSize);
-                        }
-                    }
-                }
-                
-                let confidence = isStego ? 0.70 + (rate - 0.468) * 5.0 : 0.99 - (rate / 0.468) * 0.20;
-                confidence = Math.max(0.5, Math.min(0.9999, confidence));
-                
-                let prediction = isStego ? "Stego Detected (Random Path LSB)" : "Clean Cover Image";
-                
-                return {
-                    prediction,
-                    confidence,
-                    heatmapUrl: heatCanvas.toDataURL(),
-                    featuresUrl: bitplaneData
-                };
+            } catch (err) {
+                console.error("Failed to load process list.", err);
             }
+        }
 
-            function runClientSideFallback() {
-                if (!scanPreview.src) return;
-                try {
-                    let w = scanPreview.naturalWidth || 256;
-                    let h = scanPreview.naturalHeight || 256;
-                    hiddenCanvas.width = w;
-                    hiddenCanvas.height = h;
-                    ctx.drawImage(scanPreview, 0, 0, w, h);
+        async function fetchHoneytokens() {
+            try {
+                const res = await fetch('/api/honeytokens');
+                const list = await res.json();
+                
+                const tbody = document.getElementById('decoys-table');
+                tbody.innerHTML = '';
+                
+                list.forEach(t => {
+                    let statusBadge = t.status === "Untouched" ? 
+                        `<span class="badge secure">Untouched</span>` : 
+                        `<span class="badge critical">Compromised</span>`;
+                        
+                    let row = `
+                        <tr>
+                            <td>${t.id}</td>
+                            <td style="font-weight: 500;">${t.filename}</td>
+                            <td><code style="font-family: 'JetBrains Mono', monospace; font-size: 0.75rem;">${t.path}</code></td>
+                            <td>${t.type}</td>
+                            <td>${t.size}</td>
+                            <td>${statusBadge}</td>
+                            <td>
+                                <button class="btn secondary" onclick="simulateDecoyAccess(${t.id})"><i class="fa-solid fa-hand-pointer"></i> Access</button>
+                            </td>
+                        </tr>
+                    `;
+                    tbody.innerHTML += row;
+                });
+            } catch (err) {
+                console.error("Failed to fetch honeytokens list.", err);
+            }
+        }
+
+        async function fetchLogs() {
+            try {
+                const res = await fetch('/api/logs');
+                const logs = await res.json();
+                
+                const logger = document.getElementById('console-logs');
+                logger.innerHTML = '';
+                
+                logs.forEach(log => {
+                    let typeClass = "info";
+                    if (log.level === "WARN") typeClass = "warn";
+                    else if (log.level === "ALERT") typeClass = "alert";
                     
-                    let imgData = ctx.getImageData(0, 0, w, h);
-                    let result = runClientSideSteganalysis(imgData);
-                    
-                    const isStego = result.prediction.includes('Stego');
-                    scanResultBox.className = 'result-box ' + (isStego ? 'stego' : 'clean');
-                    scanResultStatus.innerText = (isStego ? '🚨 ' : '🛡️ ') + result.prediction.toUpperCase();
-                    scanResultConf.innerText = `Client Inference Confidence: ${(result.confidence * 100).toFixed(2)}%`;
-                    scanResultBox.style.display = 'block';
-                    
-                    gradcamImg.src = result.heatmapUrl;
-                    document.getElementById('gradcam-placeholder-text').style.display = 'none';
-                    gradcamImg.style.display = 'block';
-                    
-                    hiddenCanvas.width = w;
-                    hiddenCanvas.height = h;
-                    ctx.putImageData(result.featuresUrl, 0, 0);
-                    featuresImg.src = hiddenCanvas.toDataURL();
-                    document.getElementById('features-placeholder-text').style.display = 'none';
-                    featuresImg.style.display = 'block';
-                    featuresContainer.style.display = 'block';
-                    
-                    const badge = document.getElementById('device-badge');
-                    badge.innerText = `DEVICE: BROWSER ENGINE`;
-                    badge.style.backgroundColor = "rgba(16, 185, 129, 0.15)";
-                    badge.style.borderColor = "rgba(16, 185, 129, 0.3)";
-                    badge.style.color = "#34D399";
-                    
-                } catch (e) {
-                    console.error("Client-side scanning failed:", e);
-                    alert("Scanning failed: " + e.message);
-                } finally {
-                    btnScan.disabled = false;
-                    btnScan.innerHTML = '🔎 Run UC-DFNet Steganalysis';
-                }
+                    let line = `
+                        <div class="console-line ${typeClass}">
+                            <span class="time">[${log.timestamp}]</span>
+                            <span class="source">[${log.source}]</span>
+                            <span>${log.event}</span>
+                        </div>
+                    `;
+                    logger.innerHTML += line;
+                });
+            } catch (err) {
+                console.error("Failed to fetch logs.", err);
             }
+        }
 
-            btnScan.addEventListener('click', async () => {
-                const file = scanInput.files[0];
-                if (!file) return;
-
-                btnScan.disabled = true;
-                btnScan.innerHTML = '⚡ Scanning image...';
-
-                const formData = new FormData();
-                formData.append('file', file);
-
-                const apiBase = getApiUrl();
-                try {
-                    const response = await fetch(`${apiBase}/api/analyze`, {
-                        method: 'POST',
-                        body: formData
-                    });
-
-                    const data = await response.json();
-                    if (data.success) {
-                        const isStego = data.prediction.includes('Stego');
-                        scanResultBox.className = 'result-box ' + (isStego ? 'stego' : 'clean');
-                        scanResultStatus.innerText = (isStego ? '🚨 ' : '🛡️ ') + data.prediction.toUpperCase();
-                        scanResultConf.innerText = `Inference Confidence: ${(data.confidence * 100).toFixed(2)}%`;
-                        scanResultBox.style.display = 'block';
-
-                        const cleanUrl = (url) => url.startsWith('/') ? `${apiBase}${url}` : url;
-
-                        gradcamImg.src = cleanUrl(data.gradcam_url);
-                        document.getElementById('gradcam-placeholder-text').style.display = 'none';
-                        gradcamImg.style.display = 'block';
-                        
-                        if (data.features_url) {
-                            featuresImg.src = cleanUrl(data.features_url);
-                            document.getElementById('features-placeholder-text').style.display = 'none';
-                            featuresImg.style.display = 'block';
-                            featuresContainer.style.display = 'block';
-                        }
-                    } else {
-                        alert(`Analysis failed: ${data.error}`);
-                    }
-                } catch (error) {
-                    console.warn('Backend server offline. Running client-side steganalysis engine...', error);
-                    runClientSideFallback();
-                } finally {
-                    btnScan.disabled = false;
-                    btnScan.innerHTML = '🔎 Run UC-DFNet Steganalysis';
-                }
-            });
-
-
-            // ================== CLIENT-SIDE STEGANOGRAPHY SANDBOX ==================
-            // Bits utilities
-            function stringToBits(str) {
-                let bits = [];
-                for (let i = 0; i < str.length; i++) {
-                    let charCode = str.charCodeAt(i);
-                    let bin = charCode.toString(2).padStart(8, '0');
-                    for (let b of bin) {
-                        bits.push(parseInt(b));
-                    }
-                }
-                // Add null terminator (8 bits of 0)
-                for (let i = 0; i < 8; i++) bits.push(0);
-                return bits;
+        // Trigger simulation calls
+        async function triggerSimulation() {
+            try {
+                const res = await fetch('/api/simulate_ransomware', { method: 'POST' });
+                const data = await res.json();
+                if (!res.ok) alert(data.error);
+            } catch (err) {
+                console.error("Simulation failed.", err);
             }
+        }
 
-            function bitsToString(bits) {
-                let str = "";
-                for (let i = 0; i < bits.length; i += 8) {
-                    let byte = bits.slice(i, i + 8);
-                    if (byte.length < 8) break;
-                    let charCode = parseInt(byte.join(''), 2);
-                    if (charCode === 0) break; // Null terminator
-                    str += String.fromCharCode(charCode);
-                }
-                return str;
+        async function terminateProcess(pid) {
+            try {
+                const fd = new FormData();
+                fd.append("pid", pid);
+                await fetch('/api/terminate_process', { method: 'POST', body: fd });
+            } catch (err) {
+                console.error("Process termination failed.", err);
             }
+        }
 
-            // Linear Congruential Generator Shuffling (matches Python LCG perfectly)
-            function getShuffledIndices(length, seed) {
-                let indices = Array.from({length}, (_, i) => i);
-                let state = seed;
-                for (let i = indices.length - 1; i > 0; i--) {
-                    state = (1664525 * state + 1013904223) % 4294967296;
-                    let j = state % (i + 1);
-                    let temp = indices[i];
-                    indices[i] = indices[j];
-                    indices[j] = temp;
-                }
-                return indices;
+        async function simulateDecoyAccess(id) {
+            try {
+                const fd = new FormData();
+                fd.append("id", id);
+                await fetch('/api/trigger_honeytoken_alert', { method: 'POST', body: fd });
+            } catch (err) {
+                console.error("Honeytoken trigger failed.", err);
             }
+        }
 
-            // 8x8 block DCT and IDCT implementations in JS
-            function dct8x8(block) {
-                let dct = Array.from({length: 8}, () => new Float32Array(8));
-                for (let u = 0; u < 8; u++) {
-                    for (let v = 0; v < 8; v++) {
-                        let sum = 0;
-                        for (let x = 0; x < 8; x++) {
-                            for (let y = 0; y < 8; y++) {
-                                sum += block[x][y] * Math.cos(((2 * x + 1) * u * Math.PI) / 16) * Math.cos(((2 * y + 1) * v * Math.PI) / 16);
-                            }
-                        }
-                        let cu = u === 0 ? 1 / Math.sqrt(2) : 1;
-                        let cv = v === 0 ? 1 / Math.sqrt(2) : 1;
-                        dct[u][v] = 0.25 * cu * cv * sum;
-                    }
-                }
-                return dct;
+        async function updateThreshold(val) {
+            document.getElementById('threshold-val').textContent = parseFloat(val).toFixed(2);
+            try {
+                const fd = new FormData();
+                fd.append("threshold", val);
+                await fetch('/api/update_threshold', { method: 'POST', body: fd });
+            } catch (err) {
+                console.error("Update threshold failed.", err);
             }
+        }
 
-            function idct8x8(dct) {
-                let block = Array.from({length: 8}, () => new Float32Array(8));
-                for (let x = 0; x < 8; x++) {
-                    for (let y = 0; y < 8; y++) {
-                        let sum = 0;
-                        for (let u = 0; u < 8; u++) {
-                            for (let v = 0; v < 8; v++) {
-                                let cu = u === 0 ? 1 / Math.sqrt(2) : 1;
-                                let cv = v === 0 ? 1 / Math.sqrt(2) : 1;
-                                sum += cu * cv * dct[u][v] * Math.cos(((2 * x + 1) * u * Math.PI) / 16) * Math.cos(((2 * y + 1) * v * Math.PI) / 16);
-                            }
-                        }
-                        block[x][y] = 0.25 * sum;
-                    }
-                }
-                return block;
-            }
-
-            // Embedding logic on raw pixels (ImageData) - Random Path LSB ONLY
-            function embedPayload(imageData, message, algo, channelDesc, param) {
-                let data = imageData.data;
-                let bits = stringToBits(message);
-                let bitIdx = 0;
-                
-                // Map Channels
-                let channels = [0, 1, 2]; // Default RGB
-                if (channelDesc.includes("Red")) channels = [0];
-                else if (channelDesc.includes("Green")) channels = [1];
-                else if (channelDesc.includes("Blue")) channels = [2];
-
-                const totalPixels = data.length / 4;
-
-                let seed = parseInt(param) || 42;
-                let indices = getShuffledIndices(totalPixels, seed);
-                for (let idx of indices) {
-                    let i = idx * 4;
-                    for (let c of channels) {
-                        if (bitIdx >= bits.length) return;
-                        data[i + c] = (data[i + c] & ~1) | bits[bitIdx];
-                        bitIdx++;
-                    }
-                }
-            }
-
-            // Extract logic from raw pixels (ImageData) - Random Path LSB ONLY
-            function extractPayload(imageData, algo, channelDesc, param) {
-                let data = imageData.data;
-                let bits = [];
-                let currentByte = [];
-                
-                // Map Channels
-                let channels = [0, 1, 2];
-                if (channelDesc.includes("Red")) channels = [0];
-                else if (channelDesc.includes("Green")) channels = [1];
-                else if (channelDesc.includes("Blue")) channels = [2];
-
-                const totalPixels = data.length / 4;
-
-                let seed = parseInt(param) || 42;
-                let indices = getShuffledIndices(totalPixels, seed);
-                for (let idx of indices) {
-                    let i = idx * 4;
-                    for (let c of channels) {
-                        let bit = data[i + c] & 1;
-                        bits.push(bit);
-                        currentByte.push(bit);
-                        if (currentByte.length === 8) {
-                            let byteVal = parseInt(currentByte.join(''), 2);
-                            if (byteVal === 0) return bitsToString(bits);
-                            currentByte = [];
-                        }
-                    }
-                }
-                return bitsToString(bits);
-            }
-
-
-            // --- Embed Sandbox Interface Hooks ---
-            const covDropzone = document.getElementById('cov-dropzone');
-            const covInput = document.getElementById('cov-file-input');
-            const covPreview = document.getElementById('cov-preview');
+        async function deployDecoy(e) {
+            e.preventDefault();
+            const name = document.getElementById('decoy-name').value;
+            const path = document.getElementById('decoy-path').value;
+            const type = document.getElementById('decoy-type').value;
+            const size = document.getElementById('decoy-size').value || "1.0 KB";
             
-            const embedAlgo = document.getElementById('embed-algo');
-            const embedChannels = document.getElementById('embed-channels');
-            const embedParam = document.getElementById('embed-param');
-            const embedMessage = document.getElementById('embed-message');
-            const btnEmbed = document.getElementById('btn-embed');
-            const embedResultBox = document.getElementById('embed-result-box');
-            const btnDownloadStego = document.getElementById('btn-download-stego');
-            
-            const hiddenCanvas = document.getElementById('hidden-canvas');
-            const ctx = hiddenCanvas.getContext('2d', { colorSpace: 'srgb', willReadFrequently: true });
-            ctx.imageSmoothingEnabled = false;
-            
-            let loadedCoverImage = null;
-            let finalStegoDataUrl = null;
-
-            covDropzone.addEventListener('click', () => covInput.click());
-
-            covInput.addEventListener('change', (e) => {
-                const file = e.target.files[0];
-                if (file) {
-                    const reader = new FileReader();
-                    reader.onload = (event) => {
-                        covPreview.src = event.target.result;
-                        covPreview.style.display = 'block';
-                        document.getElementById('cov-dropzone-inner').style.display = 'none';
-                        
-                        loadedCoverImage = new Image();
-                        loadedCoverImage.onload = () => {
-                            btnEmbed.disabled = false;
-                        };
-                        loadedCoverImage.src = event.target.result;
-                    };
-                    reader.readAsDataURL(file);
+            try {
+                const fd = new FormData();
+                fd.append("filename", name);
+                fd.append("path", path);
+                fd.append("type", type);
+                fd.append("size", size);
+                
+                const res = await fetch('/api/deploy_honeytoken', { method: 'POST', body: fd });
+                if (res.ok) {
+                    document.getElementById('deploy-form').reset();
+                    // Add decoy node to visual tree
+                    const tree = document.getElementById('directory-tree');
+                    tree.innerHTML += `
+                        <div class="dir-item decoy" style="padding-left: 2rem;">
+                            <i class="fa-solid fa-file-shield"></i> ${name} <span style="font-size: 0.7rem;">(Decoy)</span>
+                        </div>
+                    `;
                 }
-            });
+            } catch (err) {
+                console.error("Deploy decoy failed.", err);
+            }
+        }
 
-            btnEmbed.addEventListener('click', () => {
-                if (!loadedCoverImage) return;
-                
-                btnEmbed.disabled = true;
-                btnEmbed.innerHTML = '🔒 Processing Canvas...';
-                
-                setTimeout(() => {
-                    try {
-                        // Force standard 512x512 resolution to guarantee bit-perfect sandbox portability
-                        let w = 512;
-                        let h = 512;
-                        
-                        hiddenCanvas.width = w;
-                        hiddenCanvas.height = h;
-                        
-                        ctx.imageSmoothingEnabled = false;
-                        ctx.mozImageSmoothingEnabled = false;
-                        ctx.webkitImageSmoothingEnabled = false;
-                        ctx.globalCompositeOperation = 'copy';
-                        
-                        ctx.drawImage(loadedCoverImage, 0, 0, w, h);
-                        
-                        let imgData = ctx.getImageData(0, 0, w, h);
-                        embedPayload(imgData, embedMessage.value, embedAlgo.value, embedChannels.value, embedParam.value);
-                        ctx.putImageData(imgData, 0, 0);
-                        
-                        // Export Stego Data URL
-                        finalStegoDataUrl = hiddenCanvas.toDataURL('image/png');
-                        embedResultBox.style.display = 'block';
-                        
-                    } catch (e) {
-                        console.error(e);
-                        alert(`Client-side embedding failed: ${e.message}`);
-                    } finally {
-                        btnEmbed.disabled = false;
-                        btnEmbed.innerHTML = '🔒 Embed Message (Canvas)';
-                    }
-                }, 50);
-            });
+        function clearLogs() {
+            document.getElementById('console-logs').innerHTML = '';
+        }
 
-            btnDownloadStego.addEventListener('click', () => {
-                if (finalStegoDataUrl) {
-                    const link = document.createElement('a');
-                    link.href = finalStegoDataUrl;
-                    link.download = 'stego_canvas_image.png';
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                }
-            });
+        // Init Poller
+        setInterval(() => {
+            fetchStatus();
+            fetchProcesses();
+            fetchHoneytokens();
+            fetchLogs();
+        }, 1200);
 
-            // --- Extract Sandbox Interface Hooks ---
-            const stegDropzone = document.getElementById('steg-dropzone');
-            const stegInput = document.getElementById('steg-file-input');
-            const stegPreview = document.getElementById('steg-preview');
-            
-            const extractAlgo = document.getElementById('extract-algo');
-            const extractChannels = document.getElementById('extract-channels');
-            const extractParam = document.getElementById('extract-param');
-            const btnExtract = document.getElementById('btn-extract');
-            const extractedMessageConsole = document.getElementById('extracted-message-console');
-            
-            let loadedStegoImage = null;
-
-            stegDropzone.addEventListener('click', () => stegInput.click());
-
-            stegInput.addEventListener('change', (e) => {
-                const file = e.target.files[0];
-                if (file) {
-                    const reader = new FileReader();
-                    reader.onload = (event) => {
-                        stegPreview.src = event.target.result;
-                        stegPreview.style.display = 'block';
-                        document.getElementById('steg-dropzone-inner').style.display = 'none';
-                        
-                        loadedStegoImage = new Image();
-                        loadedStegoImage.onload = () => {
-                            btnExtract.disabled = false;
-                        };
-                        loadedStegoImage.src = event.target.result;
-                    };
-                    reader.readAsDataURL(file);
-                }
-            });
-
-            btnExtract.addEventListener('click', () => {
-                if (!loadedStegoImage) return;
-                
-                btnExtract.disabled = true;
-                btnExtract.innerHTML = '🔓 Decoding Canvas...';
-                extractedMessageConsole.innerText = 'Analyzing local pixels...';
-                
-                setTimeout(() => {
-                    try {
-                        // Force standard 512x512 resolution to match the embedding parameters exactly
-                        let w = 512;
-                        let h = 512;
-                        
-                        hiddenCanvas.width = w;
-                        hiddenCanvas.height = h;
-                        
-                        ctx.imageSmoothingEnabled = false;
-                        ctx.mozImageSmoothingEnabled = false;
-                        ctx.webkitImageSmoothingEnabled = false;
-                        ctx.globalCompositeOperation = 'copy';
-                        
-                        ctx.drawImage(loadedStegoImage, 0, 0, w, h);
-                        let imgData = ctx.getImageData(0, 0, w, h);
-                        
-                        let msg = extractPayload(imgData, extractAlgo.value, extractChannels.value, extractParam.value);
-                        if (msg) {
-                            extractedMessageConsole.innerText = msg;
-                        } else {
-                            extractedMessageConsole.innerText = '(No secret message detected or garbage bits decoded)';
-                        }
-                    } catch (e) {
-                        console.error(e);
-                        extractedMessageConsole.innerText = `Decoding failed: ${e.message}`;
-                    } finally {
-                        btnExtract.disabled = false;
-                        btnExtract.innerHTML = '🔓 Extract Message';
-                    }
-                }, 50);
-            });
-
-        });
+        // Initial Load
+        fetchStatus();
+        fetchProcesses();
+        fetchHoneytokens();
+        fetchLogs();
     </script>
 </body>
 </html>

@@ -1,220 +1,249 @@
 import os
-import cv2
-import numpy as np
-import torch
-import torch.nn.functional as F
-from flask import Flask, request, jsonify, render_template, send_from_directory
-import threading
+import math
 import time
-import sys
-
-# Import local modules
-from models.ucdfnet import UCDFNet
-from test import GradCAM, preprocess_image, get_heatmap_overlay, run_inference, visualize_features
-from utils import embed_lsb, extract_lsb, embed_lsb_matching, embed_random_path, extract_random_path, embed_dct, extract_dct, calculate_lsb_transition_rate
-from dataset.stego_dataset import generate_synthetic_dataset
-from train import train_model
+import random
+import threading
+import collections
+from flask import Flask, request, jsonify, send_from_directory
 
 app = Flask(__name__)
 
-# Device Configuration
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model_path = "best_model.pth"
-model = None
+# System State Variables
+processes = [
+    {"pid": 104, "name": "system_kernel.exe", "cpu": 1.2, "memory": "45 MB", "io_rate": "0.1 KB/s", "entropy": 3.42, "status": "Running", "risk": "Safe"},
+    {"pid": 1120, "name": "explorer.exe", "cpu": 0.8, "memory": "112 MB", "io_rate": "0.5 KB/s", "entropy": 4.15, "status": "Running", "risk": "Safe"},
+    {"pid": 2408, "name": "chrome.exe", "cpu": 3.5, "memory": "320 MB", "io_rate": "12.4 KB/s", "entropy": 4.62, "status": "Running", "risk": "Safe"},
+    {"pid": 3120, "name": "teams.exe", "cpu": 1.1, "memory": "145 MB", "io_rate": "1.2 KB/s", "entropy": 4.51, "status": "Running", "risk": "Safe"},
+    {"pid": 4012, "name": "word.exe", "cpu": 0.4, "memory": "85 MB", "io_rate": "2.1 KB/s", "entropy": 4.38, "status": "Running", "risk": "Safe"}
+]
 
+honeytokens = [
+    {"id": 1, "filename": "passwords.txt", "path": "C:\\Users\\hp 4021\\Documents\\passwords.txt", "type": "Text Decoy", "size": "1.2 KB", "status": "Untouched", "last_accessed": "Never"},
+    {"id": 2, "filename": "financial_records.xlsx", "path": "C:\\Users\\hp 4021\\Desktop\\financial_records.xlsx", "type": "Spreadsheet Decoy", "size": "45.8 KB", "status": "Untouched", "last_accessed": "Never"},
+    {"id": 3, "filename": "db_backup.sql", "path": "C:\\Users\\hp 4021\\AppData\\db_backup.sql", "type": "Database Decoy", "size": "1.2 MB", "status": "Untouched", "last_accessed": "Never"}
+]
 
+security_logs = [
+    {"timestamp": time.strftime("%H:%M:%S"), "source": "SYSTEM", "event": "EDR Engine Initialized successfully.", "level": "INFO"},
+    {"timestamp": time.strftime("%H:%M:%S"), "source": "DECEPTION_ENGINE", "event": "3 Honeytoken decoys deployed to vulnerable folders.", "level": "INFO"},
+    {"timestamp": time.strftime("%H:%M:%S"), "source": "ENTROPY_MONITOR", "event": "Real-time Shannon entropy scanning activated. Threshold set to 6.5.", "level": "INFO"}
+]
 
-def load_global_model():
-    global model
-    if os.path.exists(model_path):
-        try:
-            model = UCDFNet(num_classes=2)
-            model.load_state_dict(torch.load(model_path, map_location=device))
-            model.to(device)
-            model.eval()
-            print(f"UC-DFNet model loaded successfully onto {device}.")
-        except Exception as e:
-            print(f"Error loading model weights: {e}")
-    else:
-        print("Warning: 'best_model.pth' not found. Please ensure pre-trained model weights are placed in the root directory.")
+# Risk configuration
+entropy_threshold = 6.5
+simulation_active = False
+simulated_pid = None
 
+def calculate_shannon_entropy(data: str) -> float:
+    """Computes Shannon entropy of a string."""
+    if not data:
+        return 0.0
+    counts = collections.Counter(data)
+    total = len(data)
+    entropy = 0.0
+    for count in counts.values():
+        p = count / total
+        entropy -= p * math.log2(p)
+    return round(entropy, 2)
 
+def log_event(source, event, level="INFO"):
+    security_logs.insert(0, {
+        "timestamp": time.strftime("%H:%M:%S"),
+        "source": source,
+        "event": event,
+        "level": level
+    })
+    # Keep only recent 50 logs
+    if len(security_logs) > 50:
+        security_logs.pop()
 
+def run_ransomware_simulation():
+    global simulation_active, simulated_pid
+    sim_pid = random.randint(5000, 9999)
+    simulated_pid = sim_pid
+    
+    # Add simulation process to process explorer
+    sim_process = {
+        "pid": sim_pid,
+        "name": "wanacry_cryptor.exe",
+        "cpu": 15.6,
+        "memory": "12 MB",
+        "io_rate": "0 KB/s",
+        "entropy": 4.10,
+        "status": "Running",
+        "risk": "Medium"
+    }
+    processes.append(sim_process)
+    
+    log_event("ENTROPY_MONITOR", f"New suspicious process detected: {sim_process['name']} (PID: {sim_pid})", "WARN")
+    
+    steps = [
+        ("Scanning C:\\Users\\hp 4021\\Documents...", "normal_text_sample_12345", 3.82, "Safe", 5),
+        ("Opening passwords.txt decoy...", "normal_text_sample_54321", 4.10, "Safe", 8),
+        ("Beginning fast encryption of documents...", "F83jD#ks*dfjL9@sDfj%ks", 5.92, "Medium", 25),
+        ("Encrypting db_backup.sql decoy...", "8c0a9dfb2e3f4e5a6b7c8d9e0f", 7.84, "Critical", 65)
+    ]
+    
+    for log_msg, sample_data, mock_entropy, risk_level, io_speed in steps:
+        if not simulation_active:
+            break
+            
+        # Update process stats
+        sim_process["entropy"] = mock_entropy
+        sim_process["io_rate"] = f"{io_speed} KB/s"
+        sim_process["cpu"] = round(random.uniform(25.0, 45.0), 1)
+        sim_process["risk"] = risk_level
+        
+        # Calculate real entropy of sample data
+        real_entropy = calculate_shannon_entropy(sample_data)
+        
+        log_event("ENTROPY_MONITOR", f"{log_msg} [Write Entropy: {mock_entropy} (Calculated: {real_entropy})]", "WARN" if mock_entropy < 6.5 else "ALERT")
+        
+        # Check Layer 2 trigger: if accessing decoy
+        if "passwords.txt" in log_msg or "db_backup.sql" in log_msg:
+            # Trigger honeytoken access
+            decoy_name = "passwords.txt" if "passwords.txt" in log_msg else "db_backup.sql"
+            for token in honeytokens:
+                if token["filename"] == decoy_name:
+                    token["status"] = "Compromised"
+                    token["last_accessed"] = time.strftime("%H:%M:%S")
+            log_event("DECEPTION_ENGINE", f"Honeytoken '{decoy_name}' access detected by PID {sim_pid}! Attacker Source IP: 192.168.1.{random.randint(100, 254)}", "ALERT")
+            
+        # Check Layer 1 trigger: Entropy threshold crossed
+        if mock_entropy >= entropy_threshold:
+            log_event("RISK_ENGINE", f"CRITICAL THREAT: Write Entropy {mock_entropy} exceeded threshold {entropy_threshold}!", "ALERT")
+            # Auto terminate
+            sim_process["status"] = "Terminated"
+            sim_process["risk"] = "Terminated"
+            sim_process["cpu"] = 0.0
+            sim_process["io_rate"] = "0 KB/s"
+            log_event("SYSTEM", f"PROCESS TERMINATED BY EDR ENGINE: PID {sim_pid} ({sim_process['name']})", "INFO")
+            simulation_active = False
+            break
+            
+        time.sleep(2.5)
+        
+    simulation_active = False
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return send_from_directory('.', 'index.html')
 
-@app.route('/api/device', methods=['GET'])
-def get_device():
-    return jsonify({"device": str(device).upper()})
-
-@app.route('/api/analyze', methods=['POST'])
-def api_analyze():
-    if not model:
-        return jsonify({"success": False, "error": "Model weights ('best_model.pth') not loaded. Please train the model in the Training Wizard first."}), 400
-        
-    if 'file' not in request.files:
-        return jsonify({"success": False, "error": "No file uploaded"}), 400
-        
-    file = request.files['file']
-    if file.filename == '':
-        return jsonify({"success": False, "error": "No selected file"}), 400
-        
-    # Ensure static folder exists
-    os.makedirs('static', exist_ok=True)
-    temp_input_path = os.path.join('static', 'temp_input.png')
-    file.save(temp_input_path)
+@app.route('/api/status', methods=['GET'])
+def get_status():
+    global entropy_threshold
+    active_processes = len([p for p in processes if p["status"] == "Running"])
+    compromised_decoys = len([t for t in honeytokens if t["status"] == "Compromised"])
     
-    try:
-        # 1. Preprocess and Run Inference
-        image_tensor, original_rgb = preprocess_image(temp_input_path)
-        pred_label, confidence, probs = run_inference(model, image_tensor, device)
+    threat_score = 0
+    if compromised_decoys > 0:
+        threat_score += 45
+    if any(p["risk"] == "Critical" and p["status"] == "Running" for p in processes):
+        threat_score += 50
+    elif any(p["risk"] == "Medium" and p["status"] == "Running" for p in processes):
+        threat_score += 25
         
-        # 2. Run Grad-CAM explainability
-        grad_cam = GradCAM(model, model.stage3_fdb)
-        pred_class = np.argmax(probs)
-        cam_np, _, _ = grad_cam.generate_cam(image_tensor.to(device), target_class=pred_class)
-        overlaid_cam, _ = get_heatmap_overlay(original_rgb, cam_np)
-        grad_cam.remove_hooks()
-        
-        # Save Grad-CAM image
-        gradcam_output_path = os.path.join('static', 'gradcam.png')
-        cv2.imwrite(gradcam_output_path, cv2.cvtColor(overlaid_cam, cv2.COLOR_RGB2BGR))
-        
-        # 3. Extract Intermediate Feature maps
-        features_grid = visualize_features(model, image_tensor, device, layer_name="stage1_deb")
-        features_output_path = os.path.join('static', 'features.png')
-        cv2.imwrite(features_output_path, cv2.cvtColor(features_grid, cv2.COLOR_RGB2BGR))
-        
-        # Clean up temp input file
-        if os.path.exists(temp_input_path):
-            os.remove(temp_input_path)
-            
-        timestamp = int(time.time())
-        return jsonify({
-            "success": True,
-            "prediction": pred_label,
-            "confidence": confidence,
-            "gradcam_url": f"/static/gradcam.png?t={timestamp}",
-            "features_url": f"/static/features.png?t={timestamp}"
-        })
-    except Exception as e:
-        return jsonify({"success": False, "error": f"Error running steganalysis: {str(e)}"}), 500
-
-@app.route('/static/<path:filename>')
-def serve_static(filename):
-    return send_from_directory('static', filename)
-
-@app.route('/api/embed', methods=['POST'])
-def api_embed():
-    if 'file' not in request.files or 'message' not in request.form:
-        return jsonify({"success": False, "error": "Missing image file or text message payload"}), 400
-        
-    file = request.files['file']
-    message = request.form['message']
-    algo = request.form.get('algo', 'LSB Replacement')
-    channel_desc = request.form.get('channels', 'All Channels (RGB)')
+    threat_score = min(100, threat_score)
     
-    try:
-        param = float(request.form.get('param', '42'))
-    except ValueError:
-        return jsonify({"success": False, "error": "Invalid parameter/key value"}), 400
+    return jsonify({
+        "status": "SECURE" if threat_score < 40 else ("WARNING" if threat_score < 75 else "BREACHED"),
+        "threat_score": threat_score,
+        "active_processes": active_processes,
+        "compromised_decoys": compromised_decoys,
+        "entropy_threshold": entropy_threshold
+    })
+
+@app.route('/api/processes', methods=['GET'])
+def get_processes():
+    return jsonify(processes)
+
+@app.route('/api/honeytokens', methods=['GET'])
+def get_honeytokens():
+    return jsonify(honeytokens)
+
+@app.route('/api/logs', methods=['GET'])
+def get_logs():
+    return jsonify(security_logs)
+
+@app.route('/api/deploy_honeytoken', methods=['POST'])
+def deploy_honeytoken():
+    filename = request.form.get("filename")
+    path = request.form.get("path")
+    decoy_type = request.form.get("type", "Text Decoy")
+    size = request.form.get("size", "2.4 KB")
+    
+    if not filename or not path:
+        return jsonify({"success": False, "error": "Missing decoy file configurations."}), 400
         
-    # Read uploaded image using OpenCV
-    file_bytes = np.frombuffer(file.read(), np.uint8)
-    img = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
-    if img is None:
-        return jsonify({"success": False, "error": "Failed to decode uploaded image"}), 400
-        
-    # Map channels
-    channel_map = {
-        "All Channels (RGB)": [0, 1, 2],
-        "Red Channel Only": [0],
-        "Green Channel Only": [1],
-        "Blue Channel Only": [2]
+    new_token = {
+        "id": len(honeytokens) + 1,
+        "filename": filename,
+        "path": path,
+        "type": decoy_type,
+        "size": size,
+        "status": "Untouched",
+        "last_accessed": "Never"
     }
-    ch_list = channel_map.get(channel_desc, [0, 1, 2])
+    honeytokens.append(new_token)
+    log_event("DECEPTION_ENGINE", f"New Honeytoken decoy deployed: {filename} in {path}", "INFO")
+    return jsonify({"success": True})
+
+@app.route('/api/simulate_ransomware', methods=['POST'])
+def trigger_simulation():
+    global simulation_active
+    if simulation_active:
+        return jsonify({"success": False, "error": "Simulation already in progress."}), 400
+        
+    simulation_active = True
+    # Reset honeytokens accessed status for demo
+    for token in honeytokens:
+        token["status"] = "Untouched"
+        token["last_accessed"] = "Never"
+        
+    # Start thread
+    thread = threading.Thread(target=run_ransomware_simulation)
+    thread.daemon = True
+    thread.start()
     
-    try:
-        # Run steganographic embedding
-        if algo == "LSB Replacement":
-            stego = embed_lsb(img, message, channels=ch_list)
-        elif algo == "LSB Matching":
-            stego = embed_lsb_matching(img, message, channels=ch_list)
-        elif algo == "Random Path LSB":
-            stego = embed_random_path(img, message, key=int(param), channels=ch_list)
-        else:  # DCT Domain
-            stego = embed_dct(img, message, channels=ch_list, Q=float(param))
+    log_event("SYSTEM", "User triggered zero-day ransomware attack simulation.", "INFO")
+    return jsonify({"success": True})
+
+@app.route('/api/trigger_honeytoken_alert', methods=['POST'])
+def trigger_decoy():
+    decoy_id = int(request.form.get("id"))
+    for token in honeytokens:
+        if token["id"] == decoy_id:
+            token["status"] = "Compromised"
+            token["last_accessed"] = time.strftime("%H:%M:%S")
+            mock_ip = f"192.168.1.{random.randint(100, 254)}"
+            log_event("DECEPTION_ENGINE", f"ALERT: Unauthorized access on honeytoken '{token['filename']}'! Source IP: {mock_ip}", "ALERT")
+            return jsonify({"success": True})
             
-        os.makedirs('static', exist_ok=True)
-        stego_path = os.path.join('static', 'stego.png')
-        cv2.imwrite(stego_path, stego)
-        
-        timestamp = int(time.time())
-        return jsonify({
-            "success": True,
-            "download_url": f"/static/stego.png?t={timestamp}"
-        })
-    except Exception as e:
-        return jsonify({"success": False, "error": f"Embedding failed: {str(e)}"}), 500
+    return jsonify({"success": False, "error": "Honeytoken not found."}), 400
 
-@app.route('/api/extract', methods=['POST'])
-def api_extract():
-    if 'file' not in request.files:
-        return jsonify({"success": False, "error": "Missing stego image file"}), 400
-        
-    file = request.files['file']
-    algo = request.form.get('algo', 'LSB Replacement / Matching')
-    channel_desc = request.form.get('channels', 'All Channels (RGB)')
-    
-    try:
-        param = float(request.form.get('param', '42'))
-    except ValueError:
-        return jsonify({"success": False, "error": "Invalid parameter/key value"}), 400
-        
-    # Decode image
-    file_bytes = np.frombuffer(file.read(), np.uint8)
-    img = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
-    if img is None:
-        return jsonify({"success": False, "error": "Failed to decode uploaded stego image"}), 400
-        
-    # Map channels
-    channel_map = {
-        "All Channels (RGB)": [0, 1, 2],
-        "Red Channel Only": [0],
-        "Green Channel Only": [1],
-        "Blue Channel Only": [2]
-    }
-    ch_list = channel_map.get(channel_desc, [0, 1, 2])
-    
-    try:
-        if algo == "LSB Replacement / Matching":
-            extracted = extract_lsb(img, channels=ch_list)
-        elif algo == "Random Path LSB":
-            extracted = extract_random_path(img, key=int(param), channels=ch_list)
-        else:  # DCT
-            extracted = extract_dct(img, channels=ch_list, Q=float(param))
+@app.route('/api/terminate_process', methods=['POST'])
+def terminate_process():
+    pid = int(request.form.get("pid"))
+    for p in processes:
+        if p["pid"] == pid:
+            p["status"] = "Terminated"
+            p["risk"] = "Terminated"
+            p["cpu"] = 0.0
+            p["io_rate"] = "0 KB/s"
+            log_event("SYSTEM", f"User manually terminated process: {p['name']} (PID: {pid})", "INFO")
+            return jsonify({"success": True})
             
-        return jsonify({
-            "success": True,
-            "message": extracted
-        })
-    except Exception as e:
-        return jsonify({"success": False, "error": f"Extraction failed: {str(e)}"}), 500
+    return jsonify({"success": False, "error": "Process not found."}), 400
 
-
-
-@app.after_request
-def add_cors_headers(response):
-    response.headers.add('Access-Control-Allow-Origin', '*')
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
-    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
-    return response
+@app.route('/api/update_threshold', methods=['POST'])
+def update_threshold():
+    global entropy_threshold
+    threshold = float(request.form.get("threshold", "6.5"))
+    entropy_threshold = threshold
+    log_event("ENTROPY_MONITOR", f"Shannon entropy monitoring threshold set to {threshold}.", "INFO")
+    return jsonify({"success": True})
 
 if __name__ == '__main__':
-    # Load model weights on startup
-    load_global_model()
-    
-    # Run flask local server on port 5000
+    # Clean up Wanacry simulation from processes list on restart
+    processes = [p for p in processes if "wanacry" not in p["name"].lower()]
     app.run(host='0.0.0.0', port=5000, debug=False)
