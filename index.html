@@ -1108,13 +1108,9 @@
                 
                 setTimeout(() => {
                     try {
-                        // Align canvas size to cover image, padding to 8px block boundary for DCT
-                        let w = loadedCoverImage.naturalWidth;
-                        let h = loadedCoverImage.naturalHeight;
-                        
-                        // Round down or up to nearest multiple of 8 to ensure block-based DCT works perfectly
-                        w = w - (w % 8);
-                        h = h - (h % 8);
+                        // Force standard 512x512 resolution to guarantee bit-perfect sandbox portability
+                        let w = 512;
+                        let h = 512;
                         
                         hiddenCanvas.width = w;
                         hiddenCanvas.height = h;
@@ -1122,6 +1118,7 @@
                         ctx.imageSmoothingEnabled = false;
                         ctx.mozImageSmoothingEnabled = false;
                         ctx.webkitImageSmoothingEnabled = false;
+                        ctx.globalCompositeOperation = 'copy';
                         
                         ctx.drawImage(loadedCoverImage, 0, 0, w, h);
                         
@@ -1197,12 +1194,9 @@
                 
                 setTimeout(() => {
                     try {
-                        let w = loadedStegoImage.naturalWidth;
-                        let h = loadedStegoImage.naturalHeight;
-                        
-                        // Crop to multiple of 8
-                        w = w - (w % 8);
-                        h = h - (h % 8);
+                        // Force standard 512x512 resolution to match the embedding parameters exactly
+                        let w = 512;
+                        let h = 512;
                         
                         hiddenCanvas.width = w;
                         hiddenCanvas.height = h;
@@ -1210,6 +1204,7 @@
                         ctx.imageSmoothingEnabled = false;
                         ctx.mozImageSmoothingEnabled = false;
                         ctx.webkitImageSmoothingEnabled = false;
+                        ctx.globalCompositeOperation = 'copy';
                         
                         ctx.drawImage(loadedStegoImage, 0, 0, w, h);
                         let imgData = ctx.getImageData(0, 0, w, h);
