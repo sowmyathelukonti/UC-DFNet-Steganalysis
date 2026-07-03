@@ -483,8 +483,9 @@
 
     <!-- Sticky Tab Navigation -->
     <div class="tabs-container">
-        <button class="tab-btn active" data-tab="steganalysis-tab">🔍 Steganalysis Dashboard</button>
-        <button class="tab-btn" data-tab="sandbox-tab">🎨 Random Path Sandbox (Client-Side)</button>
+        <button class="tab-btn active" data-tab="steganalysis-tab">🔎 Steganalysis Dashboard</button>
+        <button class="tab-btn" data-tab="embed-tab">🔒 Embed Message</button>
+        <button class="tab-btn" data-tab="extract-tab">🔓 Extract Message</button>
     </div>
 
     <!-- Main Content Container -->
@@ -553,11 +554,9 @@
             </div>
         </div>
 
-        <!-- ================== TAB 2: STEGANOGRAPHY SANDBOX ================== -->
-        <div class="tab-content" id="sandbox-tab">
-            <div class="grid-2">
-                
-                <!-- Left Column: Embed Message (Client-Side Canvas) -->
+        <!-- ================== TAB 2: EMBED SANDBOX ================== -->
+        <div class="tab-content" id="embed-tab">
+            <div style="max-width: 800px; margin: 0 auto;">
                 <div class="card">
                     <div class="card-title">🔒 Embed Message</div>
                     <div class="card-subtitle">Inject secret text into a cover image using local JavaScript processing.</div>
@@ -604,8 +603,12 @@
                         <button class="btn btn-primary" id="btn-download-stego">💾 Download Stego Image</button>
                     </div>
                 </div>
-                
-                <!-- Right Column: Extract Message -->
+            </div>
+        </div>
+
+        <!-- ================== TAB 3: EXTRACT SANDBOX ================== -->
+        <div class="tab-content" id="extract-tab">
+            <div style="max-width: 800px; margin: 0 auto;">
                 <div class="card">
                     <div class="card-title">🔑 Extract Message</div>
                     <div class="card-subtitle">Decode hidden text embedded inside a stego image locally.</div>
@@ -649,7 +652,6 @@
                         </div>
                     </div>
                 </div>
-                
             </div>
         </div>
 
