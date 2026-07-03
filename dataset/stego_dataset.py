@@ -74,10 +74,66 @@ def generate_random_string(length=50):
     return ''.join(random.choice(letters_and_digits) for i in range(length))
 
 
+def generate_realistic_texture(img_size=(256, 256)):
+    """
+    Generates a highly realistic camera-sensor-like texture image.
+    Simulates lighting gradients, correlated color channels (demosaicing artifacts),
+    multi-octave fractal noise, and high-frequency camera sensor grain.
+    """
+    h, w = img_size
+    img = np.zeros((h, w, 3), dtype=np.float32)
+    
+    # 1. Base lighting gradient (simulates natural light shadows)
+    x = np.linspace(-1, 1, w)
+    y = np.linspace(-1, 1, h)
+    X, Y = np.meshgrid(x, y)
+    
+    # Add random illumination gradient
+    angle = random.uniform(0, 2 * np.pi)
+    grad = X * np.cos(angle) + Y * np.sin(angle)
+    grad = (grad - grad.min()) / (grad.max() - grad.min())
+    base_illum = 0.2 + grad * 0.6
+    
+    # Apply base illumination to all channels with slight color tinting
+    r_tint, g_tint, b_tint = random.uniform(0.9, 1.1), random.uniform(0.9, 1.1), random.uniform(0.9, 1.1)
+    img[:, :, 0] = base_illum * r_tint
+    img[:, :, 1] = base_illum * g_tint
+    img[:, :, 2] = base_illum * b_tint
+    
+    # 2. Add multi-octave structured fractal noise (simulates natural scene texture)
+    noise_map = np.zeros((h, w), dtype=np.float32)
+    octaves = [4, 8, 16, 32]
+    weights = [0.4, 0.3, 0.2, 0.1]
+    
+    for oct_val, wt in zip(octaves, weights):
+        low_res = np.random.uniform(-1, 1, (oct_val, oct_val)).astype(np.float32)
+        smooth_noise = cv2.resize(low_res, (w, h), interpolation=cv2.INTER_CUBIC)
+        noise_map += smooth_noise * wt
+        
+    noise_map = (noise_map - noise_map.min()) / (noise_map.max() - noise_map.min()) * 0.35
+    for c in range(3):
+        img[:, :, c] += noise_map * random.uniform(0.8, 1.2)
+        
+    # 3. Add demosaicing correlation (Correlate color channels to mimic camera Bayer filter array)
+    kernel = np.array([[0.25, 0.5, 0.25],
+                       [0.5,  1.0, 0.5],
+                       [0.25, 0.5, 0.25]], dtype=np.float32)
+    kernel /= kernel.sum()
+    for c in range(3):
+        img[:, :, c] = cv2.filter2D(img[:, :, c], -1, kernel)
+        
+    img = np.clip(img * 255.0, 0, 255).astype(np.uint8)
+    
+    # 4. Add high-frequency camera sensor grain (Gaussian + Poisson noise mixture)
+    gauss = np.random.normal(0, random.uniform(1.5, 4.0), img.shape).astype(np.float32)
+    poisson = np.random.normal(0, 1, img.shape).astype(np.float32) * np.sqrt(img.astype(np.float32)) * random.uniform(0.1, 0.3)
+    
+    final_img = np.clip(img.astype(np.float32) + gauss + poisson, 0, 255).astype(np.uint8)
+    return final_img
+
 def generate_synthetic_dataset(data_dir="data", num_samples=100, img_size=(256, 256)):
     """
-    Generates a synthetic dataset of Cover (Class 0) and Stego (Class 1) images.
-    Creates beautiful complex patterns with high-frequency noise and embeds messages using LSB.
+    Generates a realistic camera-textured dataset of Cover (Class 0) and Stego (Class 1) images.
     """
     cover_dir = os.path.join(data_dir, "cover")
     stego_dir = os.path.join(data_dir, "stego")
@@ -85,43 +141,11 @@ def generate_synthetic_dataset(data_dir="data", num_samples=100, img_size=(256, 
     os.makedirs(cover_dir, exist_ok=True)
     os.makedirs(stego_dir, exist_ok=True)
     
-    print(f"Generating synthetic dataset in '{data_dir}' with {num_samples} samples per class...")
+    print(f"Generating realistic dataset in '{data_dir}' with {num_samples} samples per class...")
     
     for i in range(num_samples):
-        # 1. Generate a complex textured cover image
-        img = np.zeros((img_size[0], img_size[1], 3), dtype=np.uint8)
-        
-        # Draw background gradient
-        color1 = [random.randint(0, 255) for _ in range(3)]
-        color2 = [random.randint(0, 255) for _ in range(3)]
-        for y in range(img_size[0]):
-            alpha = y / img_size[0]
-            color = [int(c1 * (1 - alpha) + c2 * alpha) for c1, c2 in zip(color1, color2)]
-            img[y, :] = color
-            
-        # Draw random shapes (circles, lines, rectangles)
-        num_shapes = random.randint(3, 8)
-        for _ in range(num_shapes):
-            shape_type = random.choice(["circle", "line", "rectangle"])
-            shape_color = [random.randint(0, 255) for _ in range(3)]
-            thickness = random.choice([-1, 1, 2, 3]) # -1 means filled for circle/rect
-            
-            if shape_type == "circle":
-                center = (random.randint(0, img_size[1]), random.randint(0, img_size[0]))
-                radius = random.randint(10, 80)
-                cv2.circle(img, center, radius, shape_color, thickness)
-            elif shape_type == "line":
-                pt1 = (random.randint(0, img_size[1]), random.randint(0, img_size[0]))
-                pt2 = (random.randint(0, img_size[1]), random.randint(0, img_size[0]))
-                cv2.line(img, pt1, pt2, shape_color, max(1, thickness))
-            elif shape_type == "rectangle":
-                pt1 = (random.randint(0, img_size[1]), random.randint(0, img_size[0]))
-                pt2 = (random.randint(0, img_size[1]), random.randint(0, img_size[0]))
-                cv2.rectangle(img, pt1, pt2, shape_color, thickness)
-                
-        # Add high-frequency Gaussian noise to simulate sensor noise (makes steganalysis more realistic)
-        noise = np.random.normal(0, random.uniform(3, 8), img.shape).astype(np.int16)
-        img = np.clip(img.astype(np.int16) + noise, 0, 255).astype(np.uint8)
+        # 1. Generate a highly realistic camera-textured cover image
+        img = generate_realistic_texture(img_size)
         
         # Save Cover Image
         cover_path = os.path.join(cover_dir, f"cover_{i:04d}.png")
