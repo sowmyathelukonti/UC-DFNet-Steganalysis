@@ -29,29 +29,40 @@ def setup_kaggle_credentials():
 
 def download_and_integrate_kaggle(limit_per_class=500, target_dir="data"):
     """
-    Downloads the 'marcozuppelli/stegoimagesdataset' from Kaggle,
-    extracts, resizes, and copies images into our training pipeline.
+    Downloads the 'marcozuppelli/stegoimagesdataset' from Kaggle or extracts a local ZIP file,
+    unzips, resizes, and copies images into our training pipeline.
     """
-    if not setup_kaggle_credentials():
-        return False
-        
-    import kaggle
-    
     temp_download_dir = "data_kaggle_temp"
     os.makedirs(temp_download_dir, exist_ok=True)
     
-    dataset_name = "marcozuppelli/stegoimagesdataset"
-    print(f"Downloading dataset '{dataset_name}' from Kaggle...")
-    
-    try:
-        # Authenticate and download
-        kaggle.api.authenticate()
-        kaggle.api.dataset_download_files(dataset_name, path=temp_download_dir, unzip=True)
-        print("Download and extraction complete!")
-    except Exception as e:
-        print(f"Error downloading from Kaggle: {e}")
-        print("Please check that your Kaggle API key is valid and you have accepted the dataset rules on Kaggle's website.")
-        return False
+    # 1. Check if the dataset zip is already present locally (manual browser download fallback)
+    local_zip = "stegoimagesdataset.zip"
+    if os.path.exists(local_zip):
+        print(f"Detected local dataset ZIP '{local_zip}'. Extracting locally...")
+        try:
+            with zipfile.ZipFile(local_zip, 'r') as zip_ref:
+                zip_ref.extractall(temp_download_dir)
+            print("Local extraction complete!")
+        except Exception as e:
+            print(f"Error unzipping local file: {e}")
+            return False
+    else:
+        # Fall back to automated Kaggle API download
+        if not setup_kaggle_credentials():
+            print("Kaggle credentials not found and no local 'stegoimagesdataset.zip' detected.")
+            print("Please place the downloaded ZIP file in this directory or set up your Kaggle API key.")
+            return False
+            
+        import kaggle
+        dataset_name = "marcozuppelli/stegoimagesdataset"
+        print(f"Downloading dataset '{dataset_name}' from Kaggle via API...")
+        try:
+            kaggle.api.authenticate()
+            kaggle.api.dataset_download_files(dataset_name, path=temp_download_dir, unzip=True)
+            print("API Download and extraction complete!")
+        except Exception as e:
+            print(f"Error downloading from Kaggle API: {e}")
+            return False
         
     # Setup target directories
     cover_target = os.path.join(target_dir, "cover")

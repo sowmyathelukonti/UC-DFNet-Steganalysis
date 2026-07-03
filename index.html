@@ -949,19 +949,13 @@
                 return str;
             }
 
-            // Pseudo-random index shuffling
-            function createPRNG(seed) {
-                return function() {
-                    let x = Math.sin(seed++) * 10000;
-                    return x - Math.floor(x);
-                };
-            }
-
+            // Linear Congruential Generator Shuffling (matches Python LCG perfectly)
             function getShuffledIndices(length, seed) {
                 let indices = Array.from({length}, (_, i) => i);
-                let rand = createPRNG(seed);
+                let state = seed;
                 for (let i = indices.length - 1; i > 0; i--) {
-                    let j = Math.floor(rand() * (i + 1));
+                    state = (1664525 * state + 1013904223) % 4294967296;
+                    let j = state % (i + 1);
                     let temp = indices[i];
                     indices[i] = indices[j];
                     indices[j] = temp;
@@ -1079,7 +1073,8 @@
             const btnDownloadStego = document.getElementById('btn-download-stego');
             
             const hiddenCanvas = document.getElementById('hidden-canvas');
-            const ctx = hiddenCanvas.getContext('2d');
+            const ctx = hiddenCanvas.getContext('2d', { colorSpace: 'srgb', willReadFrequently: true });
+            ctx.imageSmoothingEnabled = false;
             
             let loadedCoverImage = null;
             let finalStegoDataUrl = null;
@@ -1123,6 +1118,10 @@
                         
                         hiddenCanvas.width = w;
                         hiddenCanvas.height = h;
+                        
+                        ctx.imageSmoothingEnabled = false;
+                        ctx.mozImageSmoothingEnabled = false;
+                        ctx.webkitImageSmoothingEnabled = false;
                         
                         ctx.drawImage(loadedCoverImage, 0, 0, w, h);
                         
@@ -1207,6 +1206,10 @@
                         
                         hiddenCanvas.width = w;
                         hiddenCanvas.height = h;
+                        
+                        ctx.imageSmoothingEnabled = false;
+                        ctx.mozImageSmoothingEnabled = false;
+                        ctx.webkitImageSmoothingEnabled = false;
                         
                         ctx.drawImage(loadedStegoImage, 0, 0, w, h);
                         let imgData = ctx.getImageData(0, 0, w, h);

@@ -122,6 +122,20 @@ def embed_lsb_matching(image: np.ndarray, message: str, channels=[0, 1, 2]) -> n
                 
     return stego_image
 
+def lcg_shuffle(lst, seed):
+    """
+    Linear Congruential Generator (LCG) shuffle.
+    Guarantees cross-platform, bit-perfect identical shuffling between Python and JS.
+    """
+    state = seed
+    shuffled = lst.copy()
+    n = len(shuffled)
+    for i in range(n - 1, 0, -1):
+        state = (1664525 * state + 1013904223) % 4294967296
+        j = state % (i + 1)
+        shuffled[i], shuffled[j] = shuffled[j], shuffled[i]
+    return shuffled
+
 def embed_random_path(image: np.ndarray, message: str, key: int = 42, channels=[0, 1, 2]) -> np.ndarray:
     """
     Embed a message in a pseudo-random path of pixels determined by a secret key.
@@ -142,8 +156,7 @@ def embed_random_path(image: np.ndarray, message: str, key: int = 42, channels=[
     if total_bits > len(coords):
         raise ValueError(f"Message too long! Requires {total_bits} bits, but selection only has capacity for {len(coords)} bits.")
         
-    rng = np.random.default_rng(key)
-    rng.shuffle(coords)
+    coords = lcg_shuffle(coords, key)
     
     for bit_idx, (y, x, c) in enumerate(coords):
         if bit_idx >= total_bits:
@@ -166,8 +179,7 @@ def extract_random_path(image: np.ndarray, key: int = 42, channels=[0, 1, 2]) ->
             for c in channels:
                 coords.append((y, x, c))
                 
-    rng = np.random.default_rng(key)
-    rng.shuffle(coords)
+    coords = lcg_shuffle(coords, key)
     
     bits = []
     current_byte_bits = []
