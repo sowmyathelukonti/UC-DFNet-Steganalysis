@@ -180,3 +180,58 @@ Since the training is run on custom synthetic cover/stego images, the model achi
 - **Content-Adaptive Steganography Support:** Train and validate the model on more complex spatial algorithms (e.g. S-UNIWARD, WOW) and JPEG-domain steganography (e.g. J-UNIWARD).
 - **Transformer Integration:** Incorporate lightweight vision transformers (ViT) or self-attention layers after Stage 3 to capture global noise correlations across distant pixel blocks.
 - **Multi-Class Steganalysis:** Extend the classification head to identify which specific steganography algorithm was used to embed the payload, rather than just binary classification.
+
+---
+
+## 10. Run HTML Web Application Locally
+To start the Flask-based HTML web app locally:
+```bash
+python app_web.py
+```
+Then open your browser and navigate to: `http://127.0.0.1:5000`.
+
+---
+
+## 11. Public Website Hosting & Deployment
+
+To publish this project as a public website accessible to anyone on the internet, choose one of the following methods:
+
+### Method A: Deploy to Hugging Face Spaces (Highly Recommended)
+Hugging Face Spaces is the ideal platform for deploying PyTorch-based machine learning web applications for free:
+1. Log in to [Hugging Face](https://huggingface.co/) and click **New Space**.
+2. Set your **Space Name** and select **Docker** as the SDK (select **Blank** template).
+3. Under **Space Hardware**, select the free **CPU basic** tier (provides 16GB RAM, which easily supports PyTorch).
+4. Clone your Space repository locally or upload your files directly to the Space via the web interface.
+5. Create a `Dockerfile` in the root directory:
+   ```dockerfile
+   FROM python:3.11-slim
+   WORKDIR /app
+   RUN apt-get update && apt-get install -y libgl1-mesa-glx libglib2.0-0
+   COPY requirements.txt .
+   RUN pip install --no-cache-dir -r requirements.txt
+   COPY . .
+   EXPOSE 7860
+   CMD ["gunicorn", "--bind", "0.0.0.0:7860", "app_web:app"]
+   ```
+6. Commit and push. Hugging Face will automatically build the Docker container and host your app as a public website!
+
+### Method B: Deploy to Render / Railway / Heroku
+These platforms host your app directly from your connected GitHub repository:
+1. Create a free account on [Render](https://render.com) or [Railway](https://railway.app).
+2. Connect your GitHub repository: `sowmyathelukonti/UC-DFNet-Steganalysis`.
+3. Configure the service settings:
+   - **Environment:** Python
+   - **Build Command:** `pip install -r requirements.txt`
+   - **Start Command:** `gunicorn app_web:app` (Gunicorn is configured in the `Procfile`)
+4. Click **Deploy**. Render will host the app and generate a public `onrender.com` link.
+   *Note: Free tiers on Render/Railway have a 512MB RAM limit. PyTorch builds may occasionally fail or crash due to memory exhaustion. If this occurs, use Hugging Face Spaces or upgrade your tier.*
+
+### Method C: Expose Local Server Publicly (Ngrok Utility)
+To instantly share your locally running server with the public internet as a website:
+1. Install [Ngrok](https://ngrok.com/) on your computer.
+2. Start the local server: `python app_web.py`
+3. Open a separate terminal and run:
+   ```bash
+   ngrok http 5000
+   ```
+4. Ngrok will generate a secure public HTTPS URL (e.g., `https://xxxx-xx-xx.ngrok-free.app`) pointing directly to your local PC. Anyone on the internet can visit this URL to access your app!
