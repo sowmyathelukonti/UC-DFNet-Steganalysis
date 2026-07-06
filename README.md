@@ -30,33 +30,10 @@ The objectives of the UC-DFNet project are to:
 ## 4. Architecture Explanation
 
 The UC-DFNet model contains the following key components:
+<img width="1852" height="722" alt="image" src="https://github.com/user-attachments/assets/90f4482f-f5fe-4ac7-9936-8465c24afa4a" />
 
-```mermaid
-graph TD
-    Input[RGB Image 3x256x256] --> FrontConv[Front-end Conv 32x256x256]
-    
-    subgraph Stage 1
-        FrontConv --> DEB1[Dual-Path Enhancement Block DEB]
-        DEB1 --> CA1[Coordinate Attention]
-        CA1 --> FDB1[Fractal Downsampling Block FDB]
-    end
-    
-    subgraph Stage 2
-        FDB1 --> DEB2[DEB Stage 2]
-        DEB2 --> CA2[Coordinate Attention]
-        CA2 --> FDB2[Fractal Downsampling Block FDB]
-    end
-    
-    subgraph Stage 3
-        FDB2 --> DEB3[DEB Stage 3]
-        DEB3 --> CA3[Coordinate Attention]
-        CA3 --> FDB3[Fractal Downsampling Block FDB]
-    end
-    
-    FDB3 --> GAP[Global Average Pooling]
-    GAP --> FC[Fully Connected Layer]
-    FC --> Output[Prediction: Cover / Stego]
-```
+
+
 
 ### A. Dual-Path Enhancement Block (DEB)
 The DEB consists of two parallel paths that receive the input:
