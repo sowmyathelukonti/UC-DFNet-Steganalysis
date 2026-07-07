@@ -571,7 +571,12 @@
                     
                     <div class="form-group" style="margin-top: 15px;">
                         <label for="embed-algo">Embedding Method:</label>
-                        <input type="text" id="embed-algo" value="Random Path LSB" readonly class="form-control" style="background-color: var(--card-bg); color: var(--accent-purple); font-weight: bold; border-color: var(--card-border);">
+                        <select id="embed-algo">
+                            <option value="Random Path LSB">Random Path LSB</option>
+                            <option value="Sequential LSB">Sequential LSB</option>
+                            <option value="LSB Matching">LSB Matching</option>
+                            <option value="DCT Coefficient">DCT Coefficient</option>
+                        </select>
                     </div>
                     
                     <div class="form-group">
@@ -623,7 +628,12 @@
                     
                     <div class="form-group" style="margin-top: 15px;">
                         <label for="extract-algo">Expected Method:</label>
-                        <input type="text" id="extract-algo" value="Random Path LSB" readonly class="form-control" style="background-color: var(--card-bg); color: var(--accent-purple); font-weight: bold; border-color: var(--card-border);">
+                        <select id="extract-algo">
+                            <option value="Random Path LSB">Random Path LSB</option>
+                            <option value="Sequential LSB">Sequential LSB</option>
+                            <option value="LSB Matching">LSB Matching</option>
+                            <option value="DCT Coefficient">DCT Coefficient</option>
+                        </select>
                     </div>
                     
                     <div class="form-group">
@@ -814,6 +824,142 @@
                 return false;
             }
 
+            function jsCheckForHiddenMessageSequential(data, width, height) {
+                try {
+                    let totalPixels = width * height;
+                    let configs = [
+                        [0, 1, 2], // RGB
+                        [0],       // Red only
+                        [1],       // Green only
+                        [2]        // Blue only
+                    ];
+                    
+                    for (let channels of configs) {
+                        let currentByteBits = [];
+                        let charsDecoded = 0;
+                        let readableChars = 0;
+                        let aborted = false;
+                        
+                        for (let idx = 0; idx < totalPixels; idx++) {
+                            let i = idx * 4;
+                            for (let c of channels) {
+                                let bit = data[i + c] & 1;
+                                currentByteBits.push(bit);
+                                if (currentByteBits.length === 8) {
+                                    let byteVal = parseInt(currentByteBits.join(''), 2);
+                                    if (byteVal === 0) { // Null terminator
+                                        if (charsDecoded >= 3 && readableChars === charsDecoded) {
+                                            return true;
+                                        }
+                                        aborted = true;
+                                        break;
+                                    }
+                                    
+                                    if ((byteVal >= 32 && byteVal <= 126) || [9, 10, 13].includes(byteVal)) {
+                                        readableChars++;
+                                    }
+                                    charsDecoded++;
+                                    currentByteBits = [];
+                                    
+                                    if (readableChars < charsDecoded) {
+                                        aborted = true;
+                                        break;
+                                    }
+                                    if (charsDecoded > 150) {
+                                        aborted = true;
+                                        break;
+                                    }
+                                }
+                            }
+                            if (aborted) break;
+                        }
+                    }
+                } catch (e) {
+                    console.error("Active JS Sequential check error:", e);
+                }
+                return false;
+            }
+
+            function jsCheckForHiddenMessageDCT(data, width, height) {
+                try {
+                    let Q = 16.0;
+                    let coeffCoords = [[1, 1], [1, 2], [2, 1]];
+                    let configs = [
+                        [0, 1, 2], // RGB
+                        [0],       // Red only
+                        [1],       // Green only
+                        [2]        // Blue only
+                    ];
+                    
+                    for (let channels of configs) {
+                        let currentByteBits = [];
+                        let charsDecoded = 0;
+                        let readableChars = 0;
+                        let aborted = false;
+                        
+                        for (let yStart = 0; yStart < height - 7; yStart += 8) {
+                            for (let xStart = 0; xStart < width - 7; xStart += 8) {
+                                for (let c of channels) {
+                                    let block = Array.from({length: 8}, () => new Float32Array(8));
+                                    for (let y = 0; y < 8; y++) {
+                                        for (let x = 0; x < 8; x++) {
+                                            let pxIdx = ((yStart + y) * width + (xStart + x)) * 4;
+                                            block[y][x] = data[pxIdx + c];
+                                        }
+                                    }
+                                    
+                                    let dctBlock = dct8x8(block);
+                                    let quantized = Array.from({length: 8}, () => new Int32Array(8));
+                                    for (let u = 0; u < 8; u++) {
+                                        for (let v = 0; v < 8; v++) {
+                                            quantized[u][v] = Math.round(dctBlock[u][v] / Q);
+                                        }
+                                    }
+                                    
+                                    for (let coord of coeffCoords) {
+                                        let u = coord[0];
+                                        let v = coord[1];
+                                        let bit = quantized[u][v] & 1;
+                                        currentByteBits.push(bit);
+                                        if (currentByteBits.length === 8) {
+                                            let byteVal = parseInt(currentByteBits.join(''), 2);
+                                            if (byteVal === 0) { // Null terminator
+                                                if (charsDecoded >= 3 && readableChars === charsDecoded) {
+                                                    return true;
+                                                }
+                                                aborted = true;
+                                                break;
+                                            }
+                                            
+                                            if ((byteVal >= 32 && byteVal <= 126) || [9, 10, 13].includes(byteVal)) {
+                                                readableChars++;
+                                            }
+                                            charsDecoded++;
+                                            currentByteBits = [];
+                                            
+                                            if (readableChars < charsDecoded) {
+                                                aborted = true;
+                                                break;
+                                            }
+                                            if (charsDecoded > 150) {
+                                                aborted = true;
+                                                break;
+                                            }
+                                        }
+                                    }
+                                    if (aborted) break;
+                                }
+                                if (aborted) break;
+                            }
+                            if (aborted) break;
+                        }
+                    }
+                } catch (e) {
+                    console.error("Active JS DCT check error:", e);
+                }
+                return false;
+            }
+
             function runClientSideSteganalysis(imageData) {
                 let data = imageData.data;
                 let width = imageData.width;
@@ -823,6 +969,19 @@
                 let testSeeds = [42];
                 for (let s = 1; s <= 100; s++) testSeeds.push(s);
                 let hasHiddenMessage = jsCheckForHiddenMessage(data, width, height, testSeeds);
+                let hasSeqMessage = false;
+                let hasDctMessage = false;
+                
+                if (!hasHiddenMessage) {
+                    hasSeqMessage = jsCheckForHiddenMessageSequential(data, width, height);
+                }
+                if (!hasHiddenMessage && !hasSeqMessage) {
+                    hasDctMessage = jsCheckForHiddenMessageDCT(data, width, height);
+                }
+                
+                let detectedAlgo = "Random Path LSB";
+                if (hasSeqMessage) detectedAlgo = "Sequential LSB/LSB Matching";
+                if (hasDctMessage) detectedAlgo = "DCT Domain (JPEG)";
                 
                 let transitions = 0;
                 let totalPairs = 0;
@@ -853,7 +1012,7 @@
                 }
                 
                 let rate = transitions / totalPairs;
-                let isStego = rate >= 0.468 || hasHiddenMessage;
+                let isStego = rate >= 0.468 || hasHiddenMessage || hasSeqMessage || hasDctMessage;
                 
                 let heatCanvas = document.createElement('canvas');
                 heatCanvas.width = width;
@@ -913,10 +1072,10 @@
                     }
                 }
                 
-                let confidence = isStego ? (hasHiddenMessage ? 0.9999 : 0.70 + (rate - 0.468) * 5.0) : 0.99 - (rate / 0.468) * 0.20;
+                let confidence = isStego ? ((hasHiddenMessage || hasSeqMessage || hasDctMessage) ? 0.9999 : 0.70 + (rate - 0.468) * 5.0) : 0.99 - (rate / 0.468) * 0.20;
                 confidence = Math.max(0.5, Math.min(0.9999, confidence));
                 
-                let prediction = isStego ? "Stego Detected (Random Path LSB)" : "Clean Cover Image";
+                let prediction = isStego ? `Stego Detected (${detectedAlgo})` : "Clean Cover Image";
                 
                 return {
                     prediction,
@@ -1100,7 +1259,7 @@
                 return block;
             }
 
-            // Embedding logic on raw pixels (ImageData) - Random Path LSB ONLY
+            // Embedding logic on raw pixels (ImageData)
             function embedPayload(imageData, message, algo, channelDesc, param) {
                 let data = imageData.data;
                 let bits = stringToBits(message);
@@ -1113,20 +1272,101 @@
                 else if (channelDesc.includes("Blue")) channels = [2];
 
                 const totalPixels = data.length / 4;
+                const w = imageData.width;
+                const h = imageData.height;
 
-                let seed = parseInt(param) || 42;
-                let indices = getShuffledIndices(totalPixels, seed);
-                for (let idx of indices) {
-                    let i = idx * 4;
-                    for (let c of channels) {
-                        if (bitIdx >= bits.length) return;
-                        data[i + c] = (data[i + c] & ~1) | bits[bitIdx];
-                        bitIdx++;
+                if (algo === "Random Path LSB") {
+                    let seed = parseInt(param) || 42;
+                    let indices = getShuffledIndices(totalPixels, seed);
+                    for (let idx of indices) {
+                        let i = idx * 4;
+                        for (let c of channels) {
+                            if (bitIdx >= bits.length) return;
+                            data[i + c] = (data[i + c] & 254) | bits[bitIdx];
+                            bitIdx++;
+                        }
+                    }
+                } else if (algo === "Sequential LSB") {
+                    for (let idx = 0; idx < totalPixels; idx++) {
+                        let i = idx * 4;
+                        for (let c of channels) {
+                            if (bitIdx >= bits.length) return;
+                            data[i + c] = (data[i + c] & 254) | bits[bitIdx];
+                            bitIdx++;
+                        }
+                    }
+                } else if (algo === "LSB Matching") {
+                    for (let idx = 0; idx < totalPixels; idx++) {
+                        let i = idx * 4;
+                        for (let c of channels) {
+                            if (bitIdx >= bits.length) return;
+                            let val = data[i + c];
+                            let targetBit = bits[bitIdx];
+                            if ((val & 1) !== targetBit) {
+                                let change = Math.random() < 0.5 ? -1 : 1;
+                                if (val === 0) change = 1;
+                                else if (val === 255) change = -1;
+                                data[i + c] = val + change;
+                            }
+                            bitIdx++;
+                        }
+                    }
+                } else if (algo === "DCT Coefficient") {
+                    let Q = 16.0;
+                    let coeffCoords = [[1, 1], [1, 2], [2, 1]];
+                    
+                    for (let yStart = 0; yStart < h - 7; yStart += 8) {
+                        for (let xStart = 0; xStart < w - 7; xStart += 8) {
+                            for (let c of channels) {
+                                let block = Array.from({length: 8}, () => new Float32Array(8));
+                                for (let y = 0; y < 8; y++) {
+                                    for (let x = 0; x < 8; x++) {
+                                        let pxIdx = ((yStart + y) * w + (xStart + x)) * 4;
+                                        block[y][x] = data[pxIdx + c];
+                                    }
+                                }
+                                
+                                let dctBlock = dct8x8(block);
+                                let quantized = Array.from({length: 8}, () => new Int32Array(8));
+                                for (let u = 0; u < 8; u++) {
+                                    for (let v = 0; v < 8; v++) {
+                                        quantized[u][v] = Math.round(dctBlock[u][v] / Q);
+                                    }
+                                }
+                                
+                                for (let coord of coeffCoords) {
+                                    let u = coord[0];
+                                    let v = coord[1];
+                                    if (bitIdx < bits.length) {
+                                        quantized[u][v] = (quantized[u][v] & 254) | bits[bitIdx];
+                                        bitIdx++;
+                                    }
+                                }
+                                
+                                let dequantized = Array.from({length: 8}, () => new Float32Array(8));
+                                for (let u = 0; u < 8; u++) {
+                                    for (let v = 0; v < 8; v++) {
+                                        dequantized[u][v] = quantized[u][v] * Q;
+                                    }
+                                }
+                                
+                                let idctBlock = idct8x8(dequantized);
+                                for (let y = 0; y < 8; y++) {
+                                    for (let x = 0; x < 8; x++) {
+                                        let pxIdx = ((yStart + y) * w + (xStart + x)) * 4;
+                                        let val = Math.round(idctBlock[y][x]);
+                                        data[pxIdx + c] = Math.max(0, Math.min(255, val));
+                                    }
+                                }
+                                
+                                if (bitIdx >= bits.length) return;
+                            }
+                        }
                     }
                 }
             }
 
-            // Extract logic from raw pixels (ImageData) - Random Path LSB ONLY
+            // Extract logic from raw pixels (ImageData)
             function extractPayload(imageData, algo, channelDesc, param) {
                 let data = imageData.data;
                 let bits = [];
@@ -1139,19 +1379,75 @@
                 else if (channelDesc.includes("Blue")) channels = [2];
 
                 const totalPixels = data.length / 4;
+                const w = imageData.width;
+                const h = imageData.height;
 
-                let seed = parseInt(param) || 42;
-                let indices = getShuffledIndices(totalPixels, seed);
-                for (let idx of indices) {
-                    let i = idx * 4;
-                    for (let c of channels) {
-                        let bit = data[i + c] & 1;
-                        bits.push(bit);
-                        currentByte.push(bit);
-                        if (currentByte.length === 8) {
-                            let byteVal = parseInt(currentByte.join(''), 2);
-                            if (byteVal === 0) return bitsToString(bits);
-                            currentByte = [];
+                if (algo === "Random Path LSB") {
+                    let seed = parseInt(param) || 42;
+                    let indices = getShuffledIndices(totalPixels, seed);
+                    for (let idx of indices) {
+                        let i = idx * 4;
+                        for (let c of channels) {
+                            let bit = data[i + c] & 1;
+                            bits.push(bit);
+                            currentByte.push(bit);
+                            if (currentByte.length === 8) {
+                                let byteVal = parseInt(currentByte.join(''), 2);
+                                if (byteVal === 0) return bitsToString(bits);
+                                currentByte = [];
+                            }
+                        }
+                    }
+                } else if (algo === "Sequential LSB" || algo === "LSB Matching") {
+                    for (let idx = 0; idx < totalPixels; idx++) {
+                        let i = idx * 4;
+                        for (let c of channels) {
+                            let bit = data[i + c] & 1;
+                            bits.push(bit);
+                            currentByte.push(bit);
+                            if (currentByte.length === 8) {
+                                let byteVal = parseInt(currentByte.join(''), 2);
+                                if (byteVal === 0) return bitsToString(bits);
+                                currentByte = [];
+                            }
+                        }
+                    }
+                } else if (algo === "DCT Coefficient") {
+                    let Q = 16.0;
+                    let coeffCoords = [[1, 1], [1, 2], [2, 1]];
+                    
+                    for (let yStart = 0; yStart < h - 7; yStart += 8) {
+                        for (let xStart = 0; xStart < w - 7; xStart += 8) {
+                            for (let c of channels) {
+                                let block = Array.from({length: 8}, () => new Float32Array(8));
+                                for (let y = 0; y < 8; y++) {
+                                    for (let x = 0; x < 8; x++) {
+                                        let pxIdx = ((yStart + y) * w + (xStart + x)) * 4;
+                                        block[y][x] = data[pxIdx + c];
+                                    }
+                                }
+                                
+                                let dctBlock = dct8x8(block);
+                                let quantized = Array.from({length: 8}, () => new Int32Array(8));
+                                for (let u = 0; u < 8; u++) {
+                                    for (let v = 0; v < 8; v++) {
+                                        quantized[u][v] = Math.round(dctBlock[u][v] / Q);
+                                    }
+                                }
+                                
+                                for (let coord of coeffCoords) {
+                                    let u = coord[0];
+                                    let v = coord[1];
+                                    let bit = quantized[u][v] & 1;
+                                    bits.push(bit);
+                                    currentByte.push(bit);
+                                    if (currentByte.length === 8) {
+                                        let byteVal = parseInt(currentByte.join(''), 2);
+                                        if (byteVal === 0) return bitsToString(bits);
+                                        currentByte = [];
+                                    }
+                                }
+                            }
                         }
                     }
                 }

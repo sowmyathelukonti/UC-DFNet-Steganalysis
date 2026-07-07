@@ -414,3 +414,118 @@ def check_for_hidden_message(img: np.ndarray, keys=[42]) -> bool:
         print(f"Active extraction check failed: {e}")
         
     return False
+
+def check_for_hidden_message_sequential(img: np.ndarray) -> bool:
+    """
+    Checks if the image contains a readable ASCII message embedded sequentially in LSBs.
+    Matches both Sequential LSB and LSB Matching.
+    """
+    try:
+        h, w, _ = img.shape
+        
+        # Define BGR channel orders corresponding to JS (RGB, R, G, B)
+        configs = [
+            [2, 1, 0], # RGB order in BGR
+            [2],       # Red only
+            [1],       # Green only
+            [0]        # Blue only
+        ]
+        
+        for channels in configs:
+            current_byte_bits = []
+            chars_decoded = 0
+            readable_chars = 0
+            
+            # Sequential traversal
+            for y in range(h):
+                for x in range(w):
+                    for c in channels:
+                        bit = int(img[y, x, c]) & 1
+                        current_byte_bits.append(bit)
+                        if len(current_byte_bits) == 8:
+                            byte_val = int("".join(map(str, current_byte_bits)), 2)
+                            if byte_val == 0:  # Null terminator
+                                if chars_decoded >= 3 and readable_chars == chars_decoded:
+                                    return True
+                                break
+                            
+                            if (32 <= byte_val <= 126) or byte_val in [9, 10, 13]:
+                                readable_chars += 1
+                            chars_decoded += 1
+                            current_byte_bits = []
+                            
+                            # Stop if it's garbage (non-printable chars decoded) to save time
+                            if readable_chars < chars_decoded:
+                                break
+                                
+                            if chars_decoded > 150:
+                                break
+                        if readable_chars < chars_decoded or chars_decoded > 150:
+                            break
+                    if readable_chars < chars_decoded or chars_decoded > 150:
+                        break
+                if readable_chars < chars_decoded or chars_decoded > 150:
+                    break
+    except Exception as e:
+        print(f"Active sequential check failed: {e}")
+    return False
+
+def check_for_hidden_message_dct(img: np.ndarray, Q: float = 16.0) -> bool:
+    """
+    Checks if the image contains a readable ASCII message embedded in DCT coefficients.
+    """
+    try:
+        h, w, _ = img.shape
+        coeff_coords = [(1, 1), (1, 2), (2, 1)]
+        
+        configs = [
+            [2, 1, 0], # RGB order in BGR
+            [2],       # Red only
+            [1],       # Green only
+            [0]        # Blue only
+        ]
+        
+        for channels in configs:
+            current_byte_bits = []
+            chars_decoded = 0
+            readable_chars = 0
+            aborted = False
+            
+            for y_start in range(0, h - 7, 8):
+                for x_start in range(0, w - 7, 8):
+                    for c in channels:
+                        block = img[y_start:y_start+8, x_start:x_start+8, c].astype(np.float32)
+                        dct_block = cv2.dct(block)
+                        quantized = np.round(dct_block / Q).astype(np.int32)
+                        
+                        for u, v in coeff_coords:
+                            bit = int(quantized[u, v]) & 1
+                            current_byte_bits.append(bit)
+                            if len(current_byte_bits) == 8:
+                                byte_val = int("".join(map(str, current_byte_bits)), 2)
+                                if byte_val == 0:  # Null terminator
+                                    if chars_decoded >= 3 and readable_chars == chars_decoded:
+                                        return True
+                                    aborted = True
+                                    break
+                                
+                                if (32 <= byte_val <= 126) or byte_val in [9, 10, 13]:
+                                    readable_chars += 1
+                                chars_decoded += 1
+                                current_byte_bits = []
+                                
+                                if readable_chars < chars_decoded:
+                                    aborted = True
+                                    break
+                                if chars_decoded > 150:
+                                    aborted = True
+                                    break
+                        if aborted:
+                            break
+                    if aborted:
+                        break
+                if aborted:
+                    break
+    except Exception as e:
+        print(f"Active DCT check failed: {e}")
+    return False

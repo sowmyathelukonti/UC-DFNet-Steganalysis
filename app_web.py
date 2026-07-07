@@ -11,7 +11,7 @@ import sys
 # Import local modules
 from models.ucdfnet import UCDFNet
 from test import GradCAM, preprocess_image, get_heatmap_overlay, run_inference, visualize_features
-from utils import embed_lsb, extract_lsb, embed_lsb_matching, embed_random_path, extract_random_path, embed_dct, extract_dct, calculate_lsb_transition_rate, check_for_hidden_message
+from utils import embed_lsb, extract_lsb, embed_lsb_matching, embed_random_path, extract_random_path, embed_dct, extract_dct, calculate_lsb_transition_rate, check_for_hidden_message, check_for_hidden_message_sequential, check_for_hidden_message_dct
 from dataset.stego_dataset import generate_synthetic_dataset
 from train import train_model
 
@@ -76,8 +76,21 @@ def api_analyze():
         if cv_img is not None:
             # Test key 42 and seeds from 1 to 100
             test_seeds = [42] + list(range(1, 101))
-            if check_for_hidden_message(cv_img, keys=test_seeds):
-                pred_label = "Stego Image Detected (Random Path LSB)"
+            detected = check_for_hidden_message(cv_img, keys=test_seeds)
+            algo_type = "Random Path LSB"
+            
+            if not detected:
+                if check_for_hidden_message_sequential(cv_img):
+                    detected = True
+                    algo_type = "Sequential LSB/LSB Matching"
+                    
+            if not detected:
+                if check_for_hidden_message_dct(cv_img):
+                    detected = True
+                    algo_type = "DCT Domain (JPEG)"
+                    
+            if detected:
+                pred_label = f"Stego Image Detected ({algo_type})"
                 confidence = 0.9999
         
         # 2. Run Grad-CAM explainability
