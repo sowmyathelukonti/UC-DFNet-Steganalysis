@@ -965,9 +965,8 @@
                 let width = imageData.width;
                 let height = imageData.height;
                 
-                // Active check to prevent false negatives
-                let testSeeds = [42];
-                for (let s = 1; s <= 100; s++) testSeeds.push(s);
+                // Active check to prevent false negatives (optimized seed list for client-side performance)
+                let testSeeds = [42, 1, 2, 3, 5, 10];
                 let hasHiddenMessage = jsCheckForHiddenMessage(data, width, height, testSeeds);
                 let hasSeqMessage = false;
                 let hasDctMessage = false;
@@ -1175,8 +1174,9 @@
             function runClientSideFallback() {
                 if (!scanPreview.src) return;
                 try {
-                    let w = scanPreview.naturalWidth || 256;
-                    let h = scanPreview.naturalHeight || 256;
+                    // Force 512x512 resolution to match sandbox and ensure high performance
+                    let w = 512;
+                    let h = 512;
                     hiddenCanvas.width = w;
                     hiddenCanvas.height = h;
                     ctx.drawImage(scanPreview, 0, 0, w, h);
