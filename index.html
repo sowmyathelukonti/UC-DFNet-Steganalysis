@@ -1085,6 +1085,93 @@
                 };
             }
 
+            function generateSimulated16FiltersGrid(imageData) {
+                let width = imageData.width;
+                let height = imageData.height;
+                let data = imageData.data;
+                
+                let gridCanvas = document.createElement('canvas');
+                gridCanvas.width = 512;
+                gridCanvas.height = 512;
+                let gCtx = gridCanvas.getContext('2d');
+                
+                gCtx.fillStyle = '#090D1A';
+                gCtx.fillRect(0, 0, 512, 512);
+                
+                let blockSize = 128;
+                
+                for (let r = 0; r < 4; r++) {
+                    for (let c = 0; c < 4; c++) {
+                        let i = r * 4 + c;
+                        let blockData = gCtx.createImageData(blockSize, blockSize);
+                        
+                        for (let y = 0; y < blockSize; y++) {
+                            for (let x = 0; x < blockSize; x++) {
+                                let origX = Math.min(width - 1, Math.floor(x * (width / blockSize)));
+                                let origY = Math.min(height - 1, Math.floor(y * (height / blockSize)));
+                                let idx = (origY * width + origX) * 4;
+                                
+                                let R = data[idx];
+                                let G = data[idx + 1];
+                                let B = data[idx + 2];
+                                let rLsb = R & 1;
+                                let gLsb = G & 1;
+                                let bLsb = B & 1;
+                                
+                                let gray = 0;
+                                switch(i) {
+                                    case 0: gray = R; break;
+                                    case 1: gray = G; break;
+                                    case 2: gray = B; break;
+                                    case 3: gray = rLsb * 255; break;
+                                    case 4: gray = gLsb * 255; break;
+                                    case 5: gray = bLsb * 255; break;
+                                    case 6: gray = Math.abs(R - G) * 3; break;
+                                    case 7: gray = Math.abs(G - B) * 3; break;
+                                    case 8: 
+                                        let nextX = Math.min(width - 1, origX + 1);
+                                        let nextIdx = (origY * width + nextX) * 4;
+                                        gray = Math.abs(R - data[nextIdx]) * 5;
+                                        break;
+                                    case 9:
+                                        let nextY = Math.min(height - 1, origY + 1);
+                                        let nextIdxV = (nextY * width + origX) * 4;
+                                        gray = Math.abs(G - data[nextIdxV]) * 5;
+                                        break;
+                                    case 10: gray = Math.round((R + G + B) / 3); break;
+                                    case 11: gray = (R * 2 - G - B + 255) / 2; break;
+                                    case 12: gray = (G * 2 - R - B + 255) / 2; break;
+                                    case 13: gray = (B * 2 - R - G + 255) / 2; break;
+                                    case 14: gray = (rLsb ^ gLsb ^ bLsb) * 255; break;
+                                    case 15: gray = 255 - Math.round((R + G + B) / 3); break;
+                                }
+                                
+                                let bpIdx = (y * blockSize + x) * 4;
+                                gray = Math.max(0, Math.min(255, gray));
+                                blockData.data[bpIdx] = gray;
+                                blockData.data[bpIdx+1] = gray;
+                                blockData.data[bpIdx+2] = gray;
+                                blockData.data[bpIdx+3] = 255;
+                            }
+                        }
+                        
+                        let posX = c * blockSize;
+                        let posY = r * blockSize;
+                        gCtx.putImageData(blockData, posX, posY);
+                        
+                        gCtx.fillStyle = 'rgba(14, 165, 233, 0.9)';
+                        gCtx.font = 'bold 10px Inter, system-ui';
+                        gCtx.fillText("Ch " + i, posX + 6, posY + 16);
+                        
+                        gCtx.strokeStyle = '#1E293B';
+                        gCtx.lineWidth = 1;
+                        gCtx.strokeRect(posX, posY, blockSize, blockSize);
+                    }
+                }
+                
+                return gridCanvas.toDataURL();
+            }
+
             function runClientSideFallback() {
                 if (!scanPreview.src) return;
                 try {
@@ -1107,10 +1194,8 @@
                     document.getElementById('gradcam-placeholder-text').style.display = 'none';
                     gradcamImg.style.display = 'block';
                     
-                    hiddenCanvas.width = w;
-                    hiddenCanvas.height = h;
-                    ctx.putImageData(result.featuresUrl, 0, 0);
-                    featuresImg.src = hiddenCanvas.toDataURL();
+                    // Show 16-filter grid in browser engine fallback
+                    featuresImg.src = generateSimulated16FiltersGrid(imgData);
                     document.getElementById('features-placeholder-text').style.display = 'none';
                     featuresImg.style.display = 'block';
                     featuresContainer.style.display = 'block';
