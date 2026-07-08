@@ -1084,30 +1084,61 @@
                 };
             }
 
+            function getViridisColor(val) {
+                let pct = val / 255;
+                let r, g, b;
+                if (pct < 0.25) {
+                    let t = pct / 0.25;
+                    r = Math.round(68 + (49 - 68) * t);
+                    g = Math.round(1 + (104 - 1) * t);
+                    b = Math.round(84 + (142 - 84) * t);
+                } else if (pct < 0.50) {
+                    let t = (pct - 0.25) / 0.25;
+                    r = Math.round(49 + (33 - 49) * t);
+                    g = Math.round(104 + (145 - 104) * t);
+                    b = Math.round(142 + (140 - 142) * t);
+                } else if (pct < 0.75) {
+                    let t = (pct - 0.50) / 0.25;
+                    r = Math.round(33 + (94 - 33) * t);
+                    g = Math.round(145 + (201 - 145) * t);
+                    b = Math.round(140 + (98 - 140) * t);
+                } else {
+                    let t = (pct - 0.75) / 0.25;
+                    r = Math.round(94 + (253 - 94) * t);
+                    g = Math.round(201 + (231 - 201) * t);
+                    b = Math.round(98 + (37 - 98) * t);
+                }
+                return [r, g, b];
+            }
+
             function generateSimulated16FiltersGrid(imageData) {
                 let width = imageData.width;
                 let height = imageData.height;
                 let data = imageData.data;
                 
                 let gridCanvas = document.createElement('canvas');
-                gridCanvas.width = 512;
-                gridCanvas.height = 512;
+                gridCanvas.width = 600;
+                gridCanvas.height = 600;
                 let gCtx = gridCanvas.getContext('2d');
                 
-                gCtx.fillStyle = '#090D1A';
-                gCtx.fillRect(0, 0, 512, 512);
+                // Matplotlib white background
+                gCtx.fillStyle = '#FFFFFF';
+                gCtx.fillRect(0, 0, 600, 600);
                 
-                let blockSize = 128;
+                let cellSize = 125;
+                let plotSize = 105;
+                let spacing = 20;
+                let margin = 20;
                 
                 for (let r = 0; r < 4; r++) {
                     for (let c = 0; c < 4; c++) {
                         let i = r * 4 + c;
-                        let blockData = gCtx.createImageData(blockSize, blockSize);
+                        let blockData = gCtx.createImageData(plotSize, plotSize);
                         
-                        for (let y = 0; y < blockSize; y++) {
-                            for (let x = 0; x < blockSize; x++) {
-                                let origX = Math.min(width - 1, Math.floor(x * (width / blockSize)));
-                                let origY = Math.min(height - 1, Math.floor(y * (height / blockSize)));
+                        for (let y = 0; y < plotSize; y++) {
+                            for (let x = 0; x < plotSize; x++) {
+                                let origX = Math.min(width - 1, Math.floor(x * (width / plotSize)));
+                                let origY = Math.min(height - 1, Math.floor(y * (height / plotSize)));
                                 let idx = (origY * width + origX) * 4;
                                 
                                 let R = data[idx];
@@ -1145,26 +1176,28 @@
                                     case 15: gray = 255 - Math.round((R + G + B) / 3); break;
                                 }
                                 
-                                let bpIdx = (y * blockSize + x) * 4;
+                                let bpIdx = (y * plotSize + x) * 4;
                                 gray = Math.max(0, Math.min(255, gray));
-                                blockData.data[bpIdx] = gray;
-                                blockData.data[bpIdx+1] = gray;
-                                blockData.data[bpIdx+2] = gray;
+                                let [rVal, gVal, bVal] = getViridisColor(gray);
+                                
+                                blockData.data[bpIdx] = rVal;
+                                blockData.data[bpIdx+1] = gVal;
+                                blockData.data[bpIdx+2] = bVal;
                                 blockData.data[bpIdx+3] = 255;
                             }
                         }
                         
-                        let posX = c * blockSize;
-                        let posY = r * blockSize;
-                        gCtx.putImageData(blockData, posX, posY);
+                        let posX = margin + c * (cellSize + spacing);
+                        let posY = margin + r * (cellSize + spacing);
                         
-                        gCtx.fillStyle = 'rgba(14, 165, 233, 0.9)';
-                        gCtx.font = 'bold 10px Inter, system-ui';
-                        gCtx.fillText("Ch " + i, posX + 6, posY + 16);
+                        // Draw plot image
+                        gCtx.putImageData(blockData, posX + 10, posY + 18);
                         
-                        gCtx.strokeStyle = '#1E293B';
-                        gCtx.lineWidth = 1;
-                        gCtx.strokeRect(posX, posY, blockSize, blockSize);
+                        // Centered black title
+                        gCtx.fillStyle = '#000000';
+                        gCtx.textAlign = 'center';
+                        gCtx.font = '10px sans-serif';
+                        gCtx.fillText("Ch " + i, posX + 62, posY + 12);
                     }
                 }
                 
