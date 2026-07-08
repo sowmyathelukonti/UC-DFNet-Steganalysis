@@ -791,7 +791,12 @@
                                         let byteVal = parseInt(currentByteBits.join(''), 2);
                                         if (byteVal === 0) { // Null terminator
                                             if (charsDecoded >= 3 && readableChars === charsDecoded) {
-                                                return true;
+                                                return {
+                                                    detected: true,
+                                                    seed: key,
+                                                    channels: channels,
+                                                    charLength: charsDecoded
+                                                };
                                             }
                                             aborted = true;
                                             break;
@@ -821,7 +826,7 @@
                 } catch (e) {
                     console.error("Active JS check error:", e);
                 }
-                return false;
+                return { detected: false };
             }
 
             function jsCheckForHiddenMessageSequential(data, width, height) {
@@ -849,7 +854,11 @@
                                     let byteVal = parseInt(currentByteBits.join(''), 2);
                                     if (byteVal === 0) { // Null terminator
                                         if (charsDecoded >= 3 && readableChars === charsDecoded) {
-                                            return true;
+                                            return {
+                                                detected: true,
+                                                channels: channels,
+                                                charLength: charsDecoded
+                                            };
                                         }
                                         aborted = true;
                                         break;
@@ -877,7 +886,7 @@
                 } catch (e) {
                     console.error("Active JS Sequential check error:", e);
                 }
-                return false;
+                return { detected: false };
             }
 
             function jsCheckForHiddenMessageDCT(data, width, height) {
@@ -925,7 +934,11 @@
                                             let byteVal = parseInt(currentByteBits.join(''), 2);
                                             if (byteVal === 0) { // Null terminator
                                                 if (charsDecoded >= 3 && readableChars === charsDecoded) {
-                                                    return true;
+                                                    return {
+                                                        detected: true,
+                                                        channels: channels,
+                                                        charLength: charsDecoded
+                                                    };
                                                 }
                                                 aborted = true;
                                                 break;
@@ -957,7 +970,7 @@
                 } catch (e) {
                     console.error("Active JS DCT check error:", e);
                 }
-                return false;
+                return { detected: false };
             }
 
             function runClientSideSteganalysis(imageData) {
@@ -968,19 +981,19 @@
                 // Active check to prevent false negatives (optimized seed list for client-side performance)
                 let testSeeds = [42, 1, 2, 3, 5, 10];
                 let hasHiddenMessage = jsCheckForHiddenMessage(data, width, height, testSeeds);
-                let hasSeqMessage = false;
-                let hasDctMessage = false;
+                let hasSeqMessage = { detected: false };
+                let hasDctMessage = { detected: false };
                 
-                if (!hasHiddenMessage) {
+                if (!hasHiddenMessage.detected) {
                     hasSeqMessage = jsCheckForHiddenMessageSequential(data, width, height);
                 }
-                if (!hasHiddenMessage && !hasSeqMessage) {
+                if (!hasHiddenMessage.detected && !hasSeqMessage.detected) {
                     hasDctMessage = jsCheckForHiddenMessageDCT(data, width, height);
                 }
                 
                 let detectedAlgo = "Random Path LSB";
-                if (hasSeqMessage) detectedAlgo = "Sequential LSB/LSB Matching";
-                if (hasDctMessage) detectedAlgo = "DCT Domain (JPEG)";
+                if (hasSeqMessage.detected) detectedAlgo = "Sequential LSB/LSB Matching";
+                if (hasDctMessage.detected) detectedAlgo = "DCT Domain (JPEG)";
                 
                 let transitions = 0;
                 let totalPairs = 0;
@@ -1011,7 +1024,7 @@
                 }
                 
                 let rate = transitions / totalPairs;
-                let isStego = rate >= 0.468 || hasHiddenMessage || hasSeqMessage || hasDctMessage;
+                let isStego = rate >= 0.468 || hasHiddenMessage.detected || hasSeqMessage.detected || hasDctMessage.detected;
                 
                 let heatCanvas = document.createElement('canvas');
                 heatCanvas.width = width;
@@ -1023,55 +1036,177 @@
                 tempCanvas.height = height;
                 let tempCtx = tempCanvas.getContext('2d');
                 tempCtx.putImageData(imageData, 0, 0);
+                
+                // Reset heatmap canvas to cover image with dark overlay
                 heatCtx.drawImage(tempCanvas, 0, 0);
+                if (isStego) {
+                    heatCtx.fillStyle = 'rgba(10, 15, 30, 0.4)';
+                    heatCtx.fillRect(0, 0, width, height);
+                }
                 
-                heatCtx.fillStyle = 'rgba(239, 68, 68, 0.45)'; 
                 let bitplaneData = tempCtx.createImageData(width, height);
+                let totalPixels = width * height;
                 
-                let blockSize = 16;
-                let cols = Math.floor(width / blockSize);
-                let rows = Math.floor(height / blockSize);
-                
-                for (let r = 0; r < rows; r++) {
-                    for (let c = 0; c < cols; c++) {
-                        let blockTransitions = 0;
-                        let blockPairs = 0;
+                if (hasHiddenMessage.detected) {
+                    let seed = hasHiddenMessage.seed;
+                    let channels = hasHiddenMessage.channels;
+                    let bitCount = (hasHiddenMessage.charLength + 1) * 8;
+                    let pixelCount = Math.ceil(bitCount / channels.length);
+                    
+                    let indices = Array.from({length: totalPixels}, (_, i) => i);
+                    let state = seed;
+                    for (let i = indices.length - 1; i > 0; i--) {
+                        state = (1664525 * state + 1013904223) % 4294967296;
+                        let j = state % (i + 1);
+                        let temp = indices[i];
+                        indices[i] = indices[j];
+                        indices[j] = temp;
+                    }
+                    
+                    for (let i = 0; i < pixelCount; i++) {
+                        let idx = indices[i];
+                        let pxX = idx % width;
+                        let pxY = Math.floor(idx / width);
                         
-                        for (let y = 0; y < blockSize; y++) {
-                            for (let x = 0; x < blockSize; x++) {
-                                let pxX = c * blockSize + x;
-                                let pxY = r * blockSize + y;
-                                let idx = (pxY * width + pxX) * 4;
+                        let grad = heatCtx.createRadialGradient(pxX, pxY, 1, pxX, pxY, 16);
+                        grad.addColorStop(0, 'rgba(239, 68, 68, 0.25)');
+                        grad.addColorStop(0.2, 'rgba(239, 68, 68, 0.1)');
+                        grad.addColorStop(1, 'rgba(239, 68, 68, 0)');
+                        
+                        heatCtx.fillStyle = grad;
+                        heatCtx.beginPath();
+                        heatCtx.arc(pxX, pxY, 16, 0, Math.PI * 2);
+                        heatCtx.fill();
+                        
+                        let bpIdx = idx * 4;
+                        bitplaneData.data[bpIdx] = 255;
+                        bitplaneData.data[bpIdx+1] = 255;
+                        bitplaneData.data[bpIdx+2] = 255;
+                        bitplaneData.data[bpIdx+3] = 255;
+                    }
+                } else if (hasSeqMessage.detected) {
+                    let channels = hasSeqMessage.channels;
+                    let bitCount = (hasSeqMessage.charLength + 1) * 8;
+                    let pixelCount = Math.ceil(bitCount / channels.length);
+                    
+                    for (let idx = 0; idx < pixelCount; idx++) {
+                        let pxX = idx % width;
+                        let pxY = Math.floor(idx / width);
+                        
+                        let grad = heatCtx.createRadialGradient(pxX, pxY, 1, pxX, pxY, 16);
+                        grad.addColorStop(0, 'rgba(239, 68, 68, 0.25)');
+                        grad.addColorStop(0.2, 'rgba(239, 68, 68, 0.1)');
+                        grad.addColorStop(1, 'rgba(239, 68, 68, 0)');
+                        
+                        heatCtx.fillStyle = grad;
+                        heatCtx.beginPath();
+                        heatCtx.arc(pxX, pxY, 16, 0, Math.PI * 2);
+                        heatCtx.fill();
+                        
+                        let bpIdx = idx * 4;
+                        bitplaneData.data[bpIdx] = 255;
+                        bitplaneData.data[bpIdx+1] = 255;
+                        bitplaneData.data[bpIdx+2] = 255;
+                        bitplaneData.data[bpIdx+3] = 255;
+                    }
+                } else if (hasDctMessage.detected) {
+                    let channels = hasDctMessage.channels;
+                    let bitCount = (hasDctMessage.charLength + 1) * 8;
+                    let coeffPerBlock = 3;
+                    let totalDctCoeffsNeeded = bitCount;
+                    let coeffsFound = 0;
+                    
+                    for (let yStart = 0; yStart < height - 7; yStart += 8) {
+                        for (let xStart = 0; xStart < width - 7; xStart += 8) {
+                            for (let c of channels) {
+                                if (coeffsFound >= totalDctCoeffsNeeded) break;
                                 
-                                if (idx < data.length) {
-                                    let rLsb = data[idx] & 1;
-                                    let gLsb = data[idx + 1] & 1;
-                                    let bLsb = data[idx + 2] & 1;
+                                let pxX = xStart + 4;
+                                let pxY = yStart + 4;
+                                
+                                let grad = heatCtx.createRadialGradient(pxX, pxY, 2, pxX, pxY, 24);
+                                grad.addColorStop(0, 'rgba(239, 68, 68, 0.3)');
+                                grad.addColorStop(0.2, 'rgba(239, 68, 68, 0.15)');
+                                grad.addColorStop(1, 'rgba(239, 68, 68, 0)');
+                                
+                                heatCtx.fillStyle = grad;
+                                heatCtx.beginPath();
+                                heatCtx.arc(pxX, pxY, 24, 0, Math.PI * 2);
+                                heatCtx.fill();
+                                
+                                for (let dy = 0; dy < 8; dy++) {
+                                    for (let dx = 0; dx < 8; dx++) {
+                                        let bpIdx = ((yStart + dy) * width + (xStart + dx)) * 4;
+                                        bitplaneData.data[bpIdx] = 255;
+                                        bitplaneData.data[bpIdx+1] = 255;
+                                        bitplaneData.data[bpIdx+2] = 255;
+                                        bitplaneData.data[bpIdx+3] = 255;
+                                    }
+                                }
+                                
+                                coeffsFound += coeffPerBlock;
+                            }
+                            if (coeffsFound >= totalDctCoeffsNeeded) break;
+                        }
+                        if (coeffsFound >= totalDctCoeffsNeeded) break;
+                    }
+                } else if (isStego) {
+                    let blockSize = 16;
+                    let cols = Math.floor(width / blockSize);
+                    let rows = Math.floor(height / blockSize);
+                    
+                    for (let r = 0; r < rows; r++) {
+                        for (let c = 0; c < cols; c++) {
+                            let blockTransitions = 0;
+                            let blockPairs = 0;
+                            
+                            for (let y = 0; y < blockSize; y++) {
+                                for (let x = 0; x < blockSize; x++) {
+                                    let pxX = c * blockSize + x;
+                                    let pxY = r * blockSize + y;
+                                    let idx = (pxY * width + pxX) * 4;
                                     
-                                    let bpIdx = (pxY * width + pxX) * 4;
-                                    let val = (rLsb || gLsb || bLsb) ? 255 : 0;
-                                    bitplaneData.data[bpIdx] = val;
-                                    bitplaneData.data[bpIdx+1] = val;
-                                    bitplaneData.data[bpIdx+2] = val;
-                                    bitplaneData.data[bpIdx+3] = 255;
-                                    
-                                    if (pxX < width - 1) {
-                                        let nextIdx = (pxY * width + (pxX + 1)) * 4;
-                                        blockTransitions += Math.abs(rLsb - (data[nextIdx] & 1)) + Math.abs(gLsb - (data[nextIdx+1] & 1)) + Math.abs(bLsb - (data[nextIdx+2] & 1));
-                                        blockPairs += 3;
+                                    if (idx < data.length) {
+                                        let rLsb = data[idx] & 1;
+                                        let gLsb = data[idx + 1] & 1;
+                                        let bLsb = data[idx + 2] & 1;
+                                        
+                                        let bpIdx = (pxY * width + pxX) * 4;
+                                        let val = (rLsb || gLsb || bLsb) ? 255 : 0;
+                                        bitplaneData.data[bpIdx] = val;
+                                        bitplaneData.data[bpIdx+1] = val;
+                                        bitplaneData.data[bpIdx+2] = val;
+                                        bitplaneData.data[bpIdx+3] = 255;
+                                        
+                                        if (pxX < width - 1) {
+                                            let nextIdx = (pxY * width + (pxX + 1)) * 4;
+                                            blockTransitions += Math.abs(rLsb - (data[nextIdx] & 1)) + Math.abs(gLsb - (data[nextIdx+1] & 1)) + Math.abs(bLsb - (data[nextIdx+2] & 1));
+                                            blockPairs += 3;
+                                        }
                                     }
                                 }
                             }
-                        }
-                        
-                        let blockRate = blockTransitions / blockPairs;
-                        if (blockRate > 0.482 && isStego) {
-                            heatCtx.fillRect(c * blockSize, r * blockSize, blockSize, blockSize);
+                            
+                            let blockRate = blockTransitions / blockPairs;
+                            if (blockRate > 0.482) {
+                                let pxX = c * blockSize + 8;
+                                let pxY = r * blockSize + 8;
+                                
+                                let grad = heatCtx.createRadialGradient(pxX, pxY, 2, pxX, pxY, 24);
+                                grad.addColorStop(0, 'rgba(239, 68, 68, 0.3)');
+                                grad.addColorStop(0.2, 'rgba(239, 68, 68, 0.15)');
+                                grad.addColorStop(1, 'rgba(239, 68, 68, 0)');
+                                
+                                heatCtx.fillStyle = grad;
+                                heatCtx.beginPath();
+                                heatCtx.arc(pxX, pxY, 24, 0, Math.PI * 2);
+                                heatCtx.fill();
+                            }
                         }
                     }
                 }
                 
-                let confidence = isStego ? ((hasHiddenMessage || hasSeqMessage || hasDctMessage) ? 0.9999 : 0.70 + (rate - 0.468) * 5.0) : 0.99 - (rate / 0.468) * 0.20;
+                let confidence = isStego ? ((hasHiddenMessage.detected || hasSeqMessage.detected || hasDctMessage.detected) ? 0.9999 : 0.70 + (rate - 0.468) * 5.0) : 0.99 - (rate / 0.468) * 0.20;
                 confidence = Math.max(0.5, Math.min(0.9999, confidence));
                 
                 let prediction = isStego ? `Stego Detected (${detectedAlgo})` : "Clean Cover Image";

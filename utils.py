@@ -393,7 +393,7 @@ def check_for_hidden_message(img: np.ndarray, keys=[42]) -> bool:
                             byte_val = int("".join(map(str, current_byte_bits)), 2)
                             if byte_val == 0:  # Null terminator
                                 if chars_decoded >= 3 and readable_chars == chars_decoded:
-                                    return True
+                                    return {"detected": True, "seed": key, "channels": channels, "charLength": chars_decoded}
                                 break
                             
                             # Printable ASCII characters (32 to 126) + whitespace (9, 10, 13)
@@ -413,9 +413,9 @@ def check_for_hidden_message(img: np.ndarray, keys=[42]) -> bool:
     except Exception as e:
         print(f"Active extraction check failed: {e}")
         
-    return False
+    return {"detected": False}
 
-def check_for_hidden_message_sequential(img: np.ndarray) -> bool:
+def check_for_hidden_message_sequential(img: np.ndarray) -> dict:
     """
     Checks if the image contains a readable ASCII message embedded sequentially in LSBs.
     Matches both Sequential LSB and LSB Matching.
@@ -446,7 +446,7 @@ def check_for_hidden_message_sequential(img: np.ndarray) -> bool:
                             byte_val = int("".join(map(str, current_byte_bits)), 2)
                             if byte_val == 0:  # Null terminator
                                 if chars_decoded >= 3 and readable_chars == chars_decoded:
-                                    return True
+                                    return {"detected": True, "channels": channels, "charLength": chars_decoded}
                                 break
                             
                             if (32 <= byte_val <= 126) or byte_val in [9, 10, 13]:
@@ -468,9 +468,9 @@ def check_for_hidden_message_sequential(img: np.ndarray) -> bool:
                     break
     except Exception as e:
         print(f"Active sequential check failed: {e}")
-    return False
+    return {"detected": False}
 
-def check_for_hidden_message_dct(img: np.ndarray, Q: float = 16.0) -> bool:
+def check_for_hidden_message_dct(img: np.ndarray, Q: float = 16.0) -> dict:
     """
     Checks if the image contains a readable ASCII message embedded in DCT coefficients.
     """
@@ -505,7 +505,7 @@ def check_for_hidden_message_dct(img: np.ndarray, Q: float = 16.0) -> bool:
                                 byte_val = int("".join(map(str, current_byte_bits)), 2)
                                 if byte_val == 0:  # Null terminator
                                     if chars_decoded >= 3 and readable_chars == chars_decoded:
-                                        return True
+                                        return {"detected": True, "channels": channels, "charLength": chars_decoded}
                                     aborted = True
                                     break
                                 
@@ -528,4 +528,4 @@ def check_for_hidden_message_dct(img: np.ndarray, Q: float = 16.0) -> bool:
                     break
     except Exception as e:
         print(f"Active DCT check failed: {e}")
-    return False
+    return {"detected": False}
