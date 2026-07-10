@@ -1293,16 +1293,18 @@
                                     case 5: gray = bLsb * 255; break;
                                     case 6: gray = Math.abs(R - G) * 3; break;
                                     case 7: gray = Math.abs(G - B) * 3; break;
-                                    case 8: 
+                                    case 8: {
                                         let nextX = Math.min(width - 1, origX + 1);
                                         let nextIdx = (origY * width + nextX) * 4;
                                         gray = Math.abs(R - data[nextIdx]) * 5;
                                         break;
-                                    case 9:
+                                    }
+                                    case 9: {
                                         let nextY = Math.min(height - 1, origY + 1);
                                         let nextIdxV = (nextY * width + origX) * 4;
                                         gray = Math.abs(G - data[nextIdxV]) * 5;
                                         break;
+                                    }
                                     case 10: gray = Math.round((R + G + B) / 3); break;
                                     case 11: gray = (R * 2 - G - B + 255) / 2; break;
                                     case 12: gray = (G * 2 - R - B + 255) / 2; break;
