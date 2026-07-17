@@ -237,8 +237,8 @@ if __name__ == "__main__":
     
     # Run Explainability: Grad-CAM
     print("\nGenerating Grad-CAM visualization...")
-    # Target layer is the last downsampling block stage3_fdb
-    grad_cam = GradCAM(model, model.stage3_fdb)
+    # Target layer is the first Stage Dual-Path Enhancement Block stage1_deb
+    grad_cam = GradCAM(model, model.stage1_deb)
     
     # Generate CAM for predicted class
     pred_class = np.argmax(probs)

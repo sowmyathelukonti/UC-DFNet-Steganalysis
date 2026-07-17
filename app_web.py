@@ -185,7 +185,7 @@ def api_analyze():
                 
             overlaid_cam, _ = get_heatmap_overlay(original_rgb, cam_np)
         else:
-            grad_cam = GradCAM(model, model.stage3_fdb)
+            grad_cam = GradCAM(model, model.stage1_deb)
             pred_class = np.argmax(probs)
             cam_np, _, _ = grad_cam.generate_cam(image_tensor.to(device), target_class=pred_class)
             overlaid_cam, _ = get_heatmap_overlay(original_rgb, cam_np)
