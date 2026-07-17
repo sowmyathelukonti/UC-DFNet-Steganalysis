@@ -7,6 +7,7 @@ from flask import Flask, request, jsonify, render_template, send_from_directory
 import threading
 import time
 import sys
+import webbrowser
 
 # Import local modules
 from models.ucdfnet import UCDFNet
@@ -315,9 +316,19 @@ def add_cors_headers(response):
     response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
     return response
 
+def open_browser():
+    try:
+        # Open browser to local Flask instance
+        webbrowser.open_new("http://127.0.0.1:5000")
+    except Exception as e:
+        print(f"Failed to open browser automatically: {e}")
+
 if __name__ == '__main__':
     # Load model weights on startup
     load_global_model()
+    
+    # Automatically open the browser after a 1.2 second delay (once Flask starts)
+    threading.Timer(1.2, open_browser).start()
     
     # Run flask local server on port 5000
     app.run(host='0.0.0.0', port=5000, debug=False)
