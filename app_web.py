@@ -71,16 +71,20 @@ def api_analyze():
         
     # Ensure static folder exists
     os.makedirs('static', exist_ok=True)
-    temp_input_path = os.path.join('static', 'temp_input.png')
-    file.save(temp_input_path)
     
     try:
+        # Decode the uploaded file directly from memory (no disk I/O, no Windows file locking bugs)
+        file_bytes = np.frombuffer(file.read(), np.uint8)
+        cv_img = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
+        if cv_img is None:
+            return jsonify({"success": False, "error": "Failed to decode uploaded image"}), 400
+            
+        cv_img_rgb = cv2.cvtColor(cv_img, cv2.COLOR_BGR2RGB)
+        
         # 1. Preprocess and Run Inference
-        image_tensor, original_rgb = preprocess_image(temp_input_path)
+        image_tensor, original_rgb = preprocess_image(cv_img_rgb)
         pred_label, confidence, probs = run_inference(model, image_tensor, device)
         
-        # Active extraction heuristic check to prevent false negatives on sandbox stego images
-        cv_img = cv2.imread(temp_input_path)
         is_active_stego = False
         active_details = None
         algo_type = ""
@@ -196,10 +200,6 @@ def api_analyze():
         features_output_path = os.path.join('static', 'features.png')
         cv2.imwrite(features_output_path, cv2.cvtColor(features_grid, cv2.COLOR_RGB2BGR))
         
-        # Clean up temp input file
-        if os.path.exists(temp_input_path):
-            os.remove(temp_input_path)
-            
         timestamp = int(time.time())
         return jsonify({
             "success": True,
