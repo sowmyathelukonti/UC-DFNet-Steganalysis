@@ -127,14 +127,19 @@ def api_analyze():
                 pixel_count = int(np.ceil(bit_count / len(channels)))
                 
                 total_pixels = h * w
-                indices = list(range(total_pixels))
+                indices = {}
                 state = seed
-                for i in range(total_pixels - 1, 0, -1):
+                walk = []
+                for i in range(total_pixels - 1, total_pixels - 1 - pixel_count, -1):
                     state = (1664525 * state + 1013904223) % 4294967296
                     j = state % (i + 1)
-                    indices[i], indices[j] = indices[j], indices[i]
+                    val_i = indices.get(i, i)
+                    val_j = indices.get(j, j)
+                    indices[i] = val_j
+                    indices[j] = val_i
+                    walk.append(val_i)
                     
-                for idx in indices[:pixel_count]:
+                for idx in walk:
                     px_y = idx // w
                     px_x = idx % w
                     cam_np[px_y, px_x] = 1.0

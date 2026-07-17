@@ -360,6 +360,8 @@ def check_for_hidden_message(img: np.ndarray, keys=[42]) -> bool:
     try:
         h, w, _ = img.shape
         total_pixels = h * w
+        max_chars = 150
+        max_bits = (max_chars + 1) * 8  # 1208 bits
         
         # Define BGR channel orders corresponding to JS (RGB, R, G, B)
         configs = [
@@ -370,20 +372,28 @@ def check_for_hidden_message(img: np.ndarray, keys=[42]) -> bool:
         ]
         
         for key in keys:
-            # Replicate getShuffledIndices using LCG
-            indices = list(range(total_pixels))
+            # Reconstruct only the first K elements of the shuffled walk
+            K = max_bits
+            indices = {}
             state = key
-            for i in range(total_pixels - 1, 0, -1):
+            walk = []
+            
+            for i in range(total_pixels - 1, total_pixels - 1 - K, -1):
                 state = (1664525 * state + 1013904223) % 4294967296
                 j = state % (i + 1)
-                indices[i], indices[j] = indices[j], indices[i]
+                val_i = indices.get(i, i)
+                val_j = indices.get(j, j)
+                indices[i] = val_j
+                indices[j] = val_i
+                walk.append(val_i)
                 
             for channels in configs:
                 current_byte_bits = []
                 chars_decoded = 0
                 readable_chars = 0
+                aborted = False
                 
-                for idx in indices:
+                for idx in walk:
                     y = idx // w
                     x = idx % w
                     for c in channels:
@@ -394,6 +404,7 @@ def check_for_hidden_message(img: np.ndarray, keys=[42]) -> bool:
                             if byte_val == 0:  # Null terminator
                                 if chars_decoded >= 3 and readable_chars == chars_decoded:
                                     return {"detected": True, "seed": key, "channels": channels, "charLength": chars_decoded}
+                                aborted = True
                                 break
                             
                             # Printable ASCII characters (32 to 126) + whitespace (9, 10, 13)
@@ -404,11 +415,13 @@ def check_for_hidden_message(img: np.ndarray, keys=[42]) -> bool:
                             
                             # Stop if it's garbage (non-printable chars decoded) to save time
                             if readable_chars < chars_decoded:
+                                aborted = True
                                 break
                                 
-                            if chars_decoded > 150:
+                            if chars_decoded > max_chars:
+                                aborted = True
                                 break
-                    if readable_chars < chars_decoded or chars_decoded > 150:
+                    if aborted:
                         break
     except Exception as e:
         print(f"Active extraction check failed: {e}")

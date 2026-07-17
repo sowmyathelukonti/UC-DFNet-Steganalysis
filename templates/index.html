@@ -765,15 +765,21 @@
                         [2]        // Blue only
                     ];
                     
+                    let maxBits = 1208; // (150 chars + 1 null term) * 8
+                    
                     for (let key of keys) {
-                        let indices = Array.from({length: totalPixels}, (_, i) => i);
+                        let indices = {};
                         let state = key;
-                        for (let i = indices.length - 1; i > 0; i--) {
+                        let walk = [];
+                        
+                        for (let i = totalPixels - 1; i >= totalPixels - maxBits; i--) {
                             state = (1664525 * state + 1013904223) % 4294967296;
                             let j = state % (i + 1);
-                            let temp = indices[i];
-                            indices[i] = indices[j];
-                            indices[j] = temp;
+                            let val_i = (i in indices) ? indices[i] : i;
+                            let val_j = (j in indices) ? indices[j] : j;
+                            indices[i] = val_j;
+                            indices[j] = val_i;
+                            walk.push(val_i);
                         }
                         
                         for (let channels of configs) {
@@ -782,7 +788,7 @@
                             let readableChars = 0;
                             let aborted = false;
                             
-                            for (let idx of indices) {
+                            for (let idx of walk) {
                                 let i = idx * 4;
                                 for (let c of channels) {
                                     let bit = data[i + c] & 1;
@@ -1053,18 +1059,21 @@
                     let bitCount = (hasHiddenMessage.charLength + 1) * 8;
                     let pixelCount = Math.ceil(bitCount / channels.length);
                     
-                    let indices = Array.from({length: totalPixels}, (_, i) => i);
+                    let indices = {};
                     let state = seed;
-                    for (let i = indices.length - 1; i > 0; i--) {
+                    let walk = [];
+                    for (let i = totalPixels - 1; i >= totalPixels - pixelCount; i--) {
                         state = (1664525 * state + 1013904223) % 4294967296;
                         let j = state % (i + 1);
-                        let temp = indices[i];
-                        indices[i] = indices[j];
-                        indices[j] = temp;
+                        let val_i = (i in indices) ? indices[i] : i;
+                        let val_j = (j in indices) ? indices[j] : j;
+                        indices[i] = val_j;
+                        indices[j] = val_i;
+                        walk.push(val_i);
                     }
                     
                     for (let i = 0; i < pixelCount; i++) {
-                        let idx = indices[i];
+                        let idx = walk[i];
                         let pxX = idx % width;
                         let pxY = Math.floor(idx / width);
                         
