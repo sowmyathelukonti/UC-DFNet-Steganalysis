@@ -196,15 +196,20 @@ def api_analyze():
             if cam_max > 0:
                 cam_resized = cam_resized / cam_max
                 
-            high_act = cam_resized > 0.65
-            grid_y, grid_x = np.mgrid[0:h_orig, 0:w_orig]
-            sparse_mask = (grid_y % 3 == 0) & (grid_x % 3 == 0)
-            
             # Exclude the outer 4% of margins to eliminate neural padding/boundary artifacts
             border_y = max(4, int(h_orig * 0.04))
             border_x = max(4, int(w_orig * 0.04))
             inner_mask = np.zeros((h_orig, w_orig), dtype=bool)
             inner_mask[border_y:-border_y, border_x:-border_x] = True
+            
+            # Use a dynamic threshold based on the top 10% (90th percentile) of inner activations
+            # This ensures we always show suspicious regions regardless of the absolute scale
+            inner_vals = cam_resized[inner_mask]
+            thresh = np.percentile(inner_vals, 90.0) if inner_vals.size > 0 else 0.5
+            
+            high_act = cam_resized > thresh
+            grid_y, grid_x = np.mgrid[0:h_orig, 0:w_orig]
+            sparse_mask = (grid_y % 3 == 0) & (grid_x % 3 == 0)
             
             dot_mask = high_act & sparse_mask & inner_mask
             
