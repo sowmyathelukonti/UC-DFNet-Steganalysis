@@ -199,7 +199,14 @@ def api_analyze():
             high_act = cam_resized > 0.65
             grid_y, grid_x = np.mgrid[0:h_orig, 0:w_orig]
             sparse_mask = (grid_y % 3 == 0) & (grid_x % 3 == 0)
-            dot_mask = high_act & sparse_mask
+            
+            # Exclude the outer 4% of margins to eliminate neural padding/boundary artifacts
+            border_y = max(4, int(h_orig * 0.04))
+            border_x = max(4, int(w_orig * 0.04))
+            inner_mask = np.zeros((h_orig, w_orig), dtype=bool)
+            inner_mask[border_y:-border_y, border_x:-border_x] = True
+            
+            dot_mask = high_act & sparse_mask & inner_mask
             
             kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
             cam_dilated = cv2.dilate(dot_mask.astype(np.uint8), kernel)
