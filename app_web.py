@@ -161,7 +161,7 @@ def api_analyze():
             elif active_details["type"] == "DCT Domain (JPEG)":
                 channels = active_details["channels"]
                 bit_count = (active_details["charLength"] + 1) * 8
-                coeff_per_block = 3
+                coeff_per_block = 1
                 total_dct_coeffs_needed = bit_count
                 coeffs_found = 0
                 

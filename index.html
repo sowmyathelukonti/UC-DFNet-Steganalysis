@@ -466,8 +466,6 @@
     <!-- Header Branding Banner -->
     <header style="display: flex; justify-content: space-between; align-items: center; padding: 20px 40px; background-color: rgba(17, 27, 46, 0.5); border-bottom: 1px solid var(--card-border); backdrop-filter: blur(10px); flex-wrap: wrap; gap: 15px;">
         <div class="brand" style="display: flex; align-items: center; gap: 15px;">
-            <div class="brand-icon" style="font-size: 2.2rem;">🛡️</div>
-            <div class="brand-title">
                 <h1>UC-DFNet Steganalysis Portal</h1>
                 <p>Specialized Random Path LSB Steganalysis & Visual Interpretability Portal</p>
             </div>
@@ -498,7 +496,7 @@
                 <!-- Left Panel: Select and Preview Cover/Stego -->
                 <div class="card">
                     <div class="card-title">1. Select Input Image</div>
-                    <div class="card-subtitle">Choose a color image file to scan for hidden key-based Random Path LSB stego payloads.</div>
+                    <div class="card-subtitle">Choose a color image.</div>
                     
                     <div class="dropzone" id="scan-dropzone">
                         <div id="scan-dropzone-inner">
@@ -1577,7 +1575,7 @@
                     }
                 } else if (algo === "DCT Coefficient") {
                     let Q = 16.0;
-                    let coeffCoords = [[1, 1], [1, 2], [2, 1]];
+                    let coeffCoords = [[0, 0]];
                     
                     for (let yStart = 0; yStart < h - 7; yStart += 8) {
                         for (let xStart = 0; xStart < w - 7; xStart += 8) {
@@ -1678,7 +1676,7 @@
                     }
                 } else if (algo === "DCT Coefficient") {
                     let Q = 16.0;
-                    let coeffCoords = [[1, 1], [1, 2], [2, 1]];
+                    let coeffCoords = [[0, 0]];
                     
                     for (let yStart = 0; yStart < h - 7; yStart += 8) {
                         for (let xStart = 0; xStart < w - 7; xStart += 8) {

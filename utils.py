@@ -261,7 +261,7 @@ def embed_dct(image: np.ndarray, message: str, channels=[0, 1, 2], Q: float = 16
     total_bits = len(bits)
     
     h, w, _ = stego_image.shape
-    coeff_coords = [(1, 1), (1, 2), (2, 1)]
+    coeff_coords = [(0, 0)]
     
     bit_idx = 0
     for y_start in range(0, h - 7, 8):
@@ -278,7 +278,7 @@ def embed_dct(image: np.ndarray, message: str, channels=[0, 1, 2], Q: float = 16
                     if bit_idx >= total_bits:
                         dequantized = quantized.astype(np.float32) * Q
                         stego_image[y_start:y_start+8, x_start:x_start+8, c] = cv2.idct(dequantized)
-                        return np.clip(stego_image, 0, 255).astype(np.uint8)
+                        return np.clip(np.round(stego_image), 0, 255).astype(np.uint8)
                         
                     val = int(quantized[u, v])
                     val = (val & ~1) | bits[bit_idx]
@@ -292,7 +292,7 @@ def embed_dct(image: np.ndarray, message: str, channels=[0, 1, 2], Q: float = 16
     if bit_idx < total_bits:
         raise ValueError(f"Message too long! Requires {total_bits} bits, but selection only has capacity for {bit_idx} bits.")
         
-    return np.clip(stego_image, 0, 255).astype(np.uint8)
+    return np.clip(np.round(stego_image), 0, 255).astype(np.uint8)
 
 def extract_dct(image: np.ndarray, channels=[0, 1, 2], Q: float = 16.0) -> str:
     """
@@ -300,7 +300,7 @@ def extract_dct(image: np.ndarray, channels=[0, 1, 2], Q: float = 16.0) -> str:
     """
     img_float = image.astype(np.float32)
     h, w, _ = img_float.shape
-    coeff_coords = [(1, 1), (1, 2), (2, 1)]
+    coeff_coords = [(0, 0)]
     
     bits = []
     current_byte_bits = []
