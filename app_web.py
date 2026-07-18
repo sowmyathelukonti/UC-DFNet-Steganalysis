@@ -188,7 +188,24 @@ def api_analyze():
             grad_cam = GradCAM(model, model.stage1_deb)
             pred_class = np.argmax(probs)
             cam_np, _, _ = grad_cam.generate_cam(image_tensor.to(device), target_class=pred_class)
-            overlaid_cam, _ = get_heatmap_overlay(original_rgb, cam_np)
+            
+            # Convert neural Grad-CAM activations to matching sparse red dots
+            h_orig, w_orig, _ = original_rgb.shape
+            cam_resized = cv2.resize(cam_np, (w_orig, h_orig))
+            cam_max = cam_resized.max()
+            if cam_max > 0:
+                cam_resized = cam_resized / cam_max
+                
+            high_act = cam_resized > 0.65
+            grid_y, grid_x = np.mgrid[0:h_orig, 0:w_orig]
+            sparse_mask = (grid_y % 3 == 0) & (grid_x % 3 == 0)
+            dot_mask = high_act & sparse_mask
+            
+            kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
+            cam_dilated = cv2.dilate(dot_mask.astype(np.uint8), kernel)
+            
+            overlaid_cam = original_rgb.copy()
+            overlaid_cam[cam_dilated > 0] = [255, 0, 0]
             grad_cam.remove_hooks()
         
         # Save Grad-CAM image
