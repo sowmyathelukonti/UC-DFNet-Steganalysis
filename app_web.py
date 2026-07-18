@@ -177,13 +177,13 @@ def api_analyze():
                     if coeffs_found >= total_dct_coeffs_needed:
                         break
             
-            # Apply Gaussian blur to create a smooth, beautiful Grad-CAM-like heatmap overlay
-            cam_np = cv2.GaussianBlur(cam_np, (45, 45), 0)
-            cam_max = cam_np.max()
-            if cam_max > 0:
-                cam_np = cam_np / cam_max
-                
-            overlaid_cam, _ = get_heatmap_overlay(original_rgb, cam_np)
+            # Dilate the pixel mask to make individual dots clearly visible
+            kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
+            cam_dilated = cv2.dilate(cam_np, kernel)
+            
+            overlaid_cam = original_rgb.copy()
+            # Draw bright red dots over the modified pixel coordinates
+            overlaid_cam[cam_dilated > 0] = [255, 0, 0]
         else:
             grad_cam = GradCAM(model, model.stage1_deb)
             pred_class = np.argmax(probs)

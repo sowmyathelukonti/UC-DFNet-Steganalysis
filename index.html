@@ -1075,14 +1075,9 @@
                         let pxX = idx % width;
                         let pxY = Math.floor(idx / width);
                         
-                        let grad = heatCtx.createRadialGradient(pxX, pxY, 1, pxX, pxY, 16);
-                        grad.addColorStop(0, 'rgba(239, 68, 68, 0.25)');
-                        grad.addColorStop(0.2, 'rgba(239, 68, 68, 0.1)');
-                        grad.addColorStop(1, 'rgba(239, 68, 68, 0)');
-                        
-                        heatCtx.fillStyle = grad;
+                        heatCtx.fillStyle = 'rgba(239, 68, 68, 0.95)';
                         heatCtx.beginPath();
-                        heatCtx.arc(pxX, pxY, 16, 0, Math.PI * 2);
+                        heatCtx.arc(pxX, pxY, 2, 0, Math.PI * 2);
                         heatCtx.fill();
                         
                         let bpIdx = idx * 4;
@@ -1100,14 +1095,9 @@
                         let pxX = idx % width;
                         let pxY = Math.floor(idx / width);
                         
-                        let grad = heatCtx.createRadialGradient(pxX, pxY, 1, pxX, pxY, 16);
-                        grad.addColorStop(0, 'rgba(239, 68, 68, 0.25)');
-                        grad.addColorStop(0.2, 'rgba(239, 68, 68, 0.1)');
-                        grad.addColorStop(1, 'rgba(239, 68, 68, 0)');
-                        
-                        heatCtx.fillStyle = grad;
+                        heatCtx.fillStyle = 'rgba(239, 68, 68, 0.95)';
                         heatCtx.beginPath();
-                        heatCtx.arc(pxX, pxY, 16, 0, Math.PI * 2);
+                        heatCtx.arc(pxX, pxY, 2, 0, Math.PI * 2);
                         heatCtx.fill();
                         
                         let bpIdx = idx * 4;
@@ -1119,7 +1109,7 @@
                 } else if (hasDctMessage.detected) {
                     let channels = hasDctMessage.channels;
                     let bitCount = (hasDctMessage.charLength + 1) * 8;
-                    let coeffPerBlock = 3;
+                    let coeffPerBlock = 1;
                     let totalDctCoeffsNeeded = bitCount;
                     let coeffsFound = 0;
                     
@@ -1131,14 +1121,9 @@
                                 let pxX = xStart + 4;
                                 let pxY = yStart + 4;
                                 
-                                let grad = heatCtx.createRadialGradient(pxX, pxY, 2, pxX, pxY, 24);
-                                grad.addColorStop(0, 'rgba(239, 68, 68, 0.3)');
-                                grad.addColorStop(0.2, 'rgba(239, 68, 68, 0.15)');
-                                grad.addColorStop(1, 'rgba(239, 68, 68, 0)');
-                                
-                                heatCtx.fillStyle = grad;
+                                heatCtx.fillStyle = 'rgba(239, 68, 68, 0.95)';
                                 heatCtx.beginPath();
-                                heatCtx.arc(pxX, pxY, 24, 0, Math.PI * 2);
+                                heatCtx.arc(pxX, pxY, 3, 0, Math.PI * 2);
                                 heatCtx.fill();
                                 
                                 for (let dy = 0; dy < 8; dy++) {
