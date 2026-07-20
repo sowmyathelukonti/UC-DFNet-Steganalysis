@@ -8,6 +8,7 @@ import threading
 import time
 import sys
 import webbrowser
+import base64
 
 # Import local modules
 from models.ucdfnet import UCDFNet
@@ -23,8 +24,6 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model_path = "best_model.pth"
 model = None
 
-
-
 def load_global_model():
     global model
     if os.path.exists(model_path):
@@ -38,6 +37,9 @@ def load_global_model():
             print(f"Error loading model weights: {e}")
     else:
         print("Warning: 'best_model.pth' not found. Please ensure pre-trained model weights are placed in the root directory.")
+
+# Automatically load model on module import (Vercel serverless startup)
+load_global_model()
 
 
 
@@ -220,22 +222,31 @@ def api_analyze():
             overlaid_cam[cam_dilated > 0] = [255, 0, 0]
             grad_cam.remove_hooks()
         
-        # Save Grad-CAM image
-        gradcam_output_path = os.path.join('static', 'gradcam.png')
-        cv2.imwrite(gradcam_output_path, cv2.cvtColor(overlaid_cam, cv2.COLOR_RGB2BGR))
-        
         # 3. Extract Intermediate Feature maps
         features_grid = visualize_features(model, image_tensor, device, layer_name="stage1_deb")
-        features_output_path = os.path.join('static', 'features.png')
-        cv2.imwrite(features_output_path, cv2.cvtColor(features_grid, cv2.COLOR_RGB2BGR))
         
-        timestamp = int(time.time())
+        # Convert output images to base64 data URLs (100% serverless compatible, 0 disk write)
+        def to_b64(rgb_arr):
+            _, buf = cv2.imencode('.png', cv2.cvtColor(rgb_arr, cv2.COLOR_RGB2BGR))
+            return "data:image/png;base64," + base64.b64encode(buf).decode('utf-8')
+            
+        gradcam_b64 = to_b64(overlaid_cam)
+        features_b64 = to_b64(features_grid)
+        
+        # Try writing to static folder for local filesystem compatibility
+        try:
+            os.makedirs('static', exist_ok=True)
+            cv2.imwrite(os.path.join('static', 'gradcam.png'), cv2.cvtColor(overlaid_cam, cv2.COLOR_RGB2BGR))
+            cv2.imwrite(os.path.join('static', 'features.png'), cv2.cvtColor(features_grid, cv2.COLOR_RGB2BGR))
+        except Exception:
+            pass
+            
         return jsonify({
             "success": True,
             "prediction": pred_label,
             "confidence": confidence,
-            "gradcam_url": f"/static/gradcam.png?t={timestamp}",
-            "features_url": f"/static/features.png?t={timestamp}"
+            "gradcam_url": gradcam_b64,
+            "features_url": features_b64
         })
     except Exception as e:
         return jsonify({"success": False, "error": f"Error running steganalysis: {str(e)}"}), 500

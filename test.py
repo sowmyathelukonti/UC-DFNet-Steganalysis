@@ -189,17 +189,16 @@ def visualize_features(model, image_tensor, device, layer_name="stage1_deb"):
         
     plt.tight_layout()
     
-    # Save to a temporary image and return it as a numpy array
-    temp_path = "temp_features.png"
-    plt.savefig(temp_path, bbox_inches='tight', dpi=150)
+    # Render to an in-memory buffer (serverless compatible, zero disk I/O)
+    import io
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png', bbox_inches='tight', dpi=150)
     plt.close()
+    buf.seek(0)
     
-    grid_img = cv2.imread(temp_path)
+    file_bytes = np.frombuffer(buf.getvalue(), np.uint8)
+    grid_img = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
     grid_img = cv2.cvtColor(grid_img, cv2.COLOR_BGR2RGB)
-    
-    if os.path.exists(temp_path):
-        os.remove(temp_path)
-        
     return grid_img
 
 
