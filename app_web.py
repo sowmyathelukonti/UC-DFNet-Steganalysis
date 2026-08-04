@@ -92,8 +92,8 @@ def api_analyze():
         algo_type = ""
         
         if cv_img is not None:
-            # Test key 42 and seeds from 1 to 100
-            test_seeds = [42] + list(range(1, 101))
+            # Test key 42 and seeds from 1 to 1000 (computationally fast due to lazy FY)
+            test_seeds = [42] + list(range(1, 1001))
             res_rand = check_for_hidden_message(cv_img, keys=test_seeds)
             if res_rand.get("detected"):
                 is_active_stego = True
@@ -287,13 +287,13 @@ def api_embed():
     
     try:
         # Run steganographic embedding
-        if algo == "LSB Replacement":
+        if algo in ["LSB Replacement", "Sequential LSB"]:
             stego = embed_lsb(img, message, channels=ch_list)
         elif algo == "LSB Matching":
             stego = embed_lsb_matching(img, message, channels=ch_list)
         elif algo == "Random Path LSB":
             stego = embed_random_path(img, message, key=int(param), channels=ch_list)
-        else:  # DCT Domain
+        else:  # DCT Domain (covers 'DCT Coefficient')
             stego = embed_dct(img, message, channels=ch_list, Q=float(param))
             
         os.makedirs('static', exist_ok=True)
@@ -338,11 +338,11 @@ def api_extract():
     ch_list = channel_map.get(channel_desc, [0, 1, 2])
     
     try:
-        if algo == "LSB Replacement / Matching":
+        if algo in ["LSB Replacement / Matching", "Sequential LSB", "LSB Matching"]:
             extracted = extract_lsb(img, channels=ch_list)
         elif algo == "Random Path LSB":
             extracted = extract_random_path(img, key=int(param), channels=ch_list)
-        else:  # DCT
+        else:  # DCT (covers 'DCT Coefficient')
             extracted = extract_dct(img, channels=ch_list, Q=float(param))
             
         return jsonify({
