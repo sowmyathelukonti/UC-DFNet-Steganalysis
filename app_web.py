@@ -187,40 +187,42 @@ def api_analyze():
             # Draw bright red dots over the modified pixel coordinates
             overlaid_cam[cam_dilated > 0] = [255, 0, 0]
         else:
-            grad_cam = GradCAM(model, model.stage1_deb)
-            pred_class = np.argmax(probs)
-            cam_np, _, _ = grad_cam.generate_cam(image_tensor.to(device), target_class=pred_class)
-            
-            # Convert neural Grad-CAM activations to matching sparse red dots
-            h_orig, w_orig, _ = original_rgb.shape
-            cam_resized = cv2.resize(cam_np, (w_orig, h_orig))
-            cam_max = cam_resized.max()
-            if cam_max > 0:
-                cam_resized = cam_resized / cam_max
+            if pred_label == "Clean Image":
+                overlaid_cam = original_rgb.copy()
+            else:
+                grad_cam = GradCAM(model, model.stage1_deb)
+                pred_class = np.argmax(probs)
+                cam_np, _, _ = grad_cam.generate_cam(image_tensor.to(device), target_class=pred_class)
                 
-            # Exclude the outer 4% of margins to eliminate neural padding/boundary artifacts
-            border_y = max(4, int(h_orig * 0.04))
-            border_x = max(4, int(w_orig * 0.04))
-            inner_mask = np.zeros((h_orig, w_orig), dtype=bool)
-            inner_mask[border_y:-border_y, border_x:-border_x] = True
-            
-            # Use a dynamic threshold based on the top 10% (90th percentile) of inner activations
-            # This ensures we always show suspicious regions regardless of the absolute scale
-            inner_vals = cam_resized[inner_mask]
-            thresh = np.percentile(inner_vals, 90.0) if inner_vals.size > 0 else 0.5
-            
-            high_act = cam_resized > thresh
-            grid_y, grid_x = np.mgrid[0:h_orig, 0:w_orig]
-            sparse_mask = (grid_y % 3 == 0) & (grid_x % 3 == 0)
-            
-            dot_mask = high_act & sparse_mask & inner_mask
-            
-            kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
-            cam_dilated = cv2.dilate(dot_mask.astype(np.uint8), kernel)
-            
-            overlaid_cam = original_rgb.copy()
-            overlaid_cam[cam_dilated > 0] = [255, 0, 0]
-            grad_cam.remove_hooks()
+                # Convert neural Grad-CAM activations to matching sparse red dots
+                h_orig, w_orig, _ = original_rgb.shape
+                cam_resized = cv2.resize(cam_np, (w_orig, h_orig))
+                cam_max = cam_resized.max()
+                if cam_max > 0:
+                    cam_resized = cam_resized / cam_max
+                    
+                # Exclude the outer 4% of margins to eliminate neural padding/boundary artifacts
+                border_y = max(4, int(h_orig * 0.04))
+                border_x = max(4, int(w_orig * 0.04))
+                inner_mask = np.zeros((h_orig, w_orig), dtype=bool)
+                inner_mask[border_y:-border_y, border_x:-border_x] = True
+                
+                # Use a dynamic threshold based on the top 10% (90th percentile) of inner activations
+                inner_vals = cam_resized[inner_mask]
+                thresh = np.percentile(inner_vals, 90.0) if inner_vals.size > 0 else 0.5
+                
+                high_act = cam_resized > thresh
+                grid_y, grid_x = np.mgrid[0:h_orig, 0:w_orig]
+                sparse_mask = (grid_y % 3 == 0) & (grid_x % 3 == 0)
+                
+                dot_mask = high_act & sparse_mask & inner_mask
+                
+                kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
+                cam_dilated = cv2.dilate(dot_mask.astype(np.uint8), kernel)
+                
+                overlaid_cam = original_rgb.copy()
+                overlaid_cam[cam_dilated > 0] = [255, 0, 0]
+                grad_cam.remove_hooks()
         
         # 3. Extract Intermediate Feature maps
         features_grid = visualize_features(model, image_tensor, device, layer_name="stage1_deb")
