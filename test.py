@@ -154,7 +154,7 @@ def run_inference(model, image_tensor, device, threshold=0.60):
     class_labels = {0: "Clean Image", 1: "Stego Image Detected"}
     pred_label = class_labels[pred_class]
     
-    return pred_label, confidence, probs
+    return pred_label, float(confidence), probs
 
 
 def visualize_features(model, image_tensor, device, layer_name="stage1_deb"):
