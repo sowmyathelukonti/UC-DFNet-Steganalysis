@@ -133,17 +133,26 @@ def get_heatmap_overlay(original_img, cam_np, alpha=0.5):
     return superimposed_img, heatmap_colored
 
 
-def run_inference(model, image_tensor, device):
+def run_inference(model, image_tensor, device, threshold=0.60):
     """Run model inference and return predicted class, probabilities, and confidence."""
     model.eval()
     with torch.no_grad():
         logits = model(image_tensor.to(device))
         probs = F.softmax(logits, dim=1).squeeze().cpu().numpy()
         
-    pred_class = int(np.argmax(probs))
+    # Apply stego detection threshold to control false positives
+    if probs[1] >= threshold:
+        pred_class = 1
+        # Scale probs[1] from [threshold, 1.0] to [0.5, 1.0]
+        confidence = 0.5 + (probs[1] - threshold) / (1.0 - threshold) * 0.5
+    else:
+        pred_class = 0
+        # Scale probs[0] from [1.0 - threshold, 1.0] to [0.5, 1.0]
+        min_p0 = 1.0 - threshold
+        confidence = 0.5 + (probs[0] - min_p0) / (1.0 - min_p0) * 0.5
+        
     class_labels = {0: "Clean Image", 1: "Stego Image Detected"}
     pred_label = class_labels[pred_class]
-    confidence = float(probs[pred_class])
     
     return pred_label, confidence, probs
 
