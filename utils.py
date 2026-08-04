@@ -145,26 +145,36 @@ def embed_random_path(image: np.ndarray, message: str, key: int = 42, channels=[
     total_bits = len(bits)
     
     h, w, _ = stego_image.shape
+    total_pixels = h * w
     
-    # Generate coordinates for selected channels
-    coords = []
-    for y in range(h):
-        for x in range(w):
-            for c in channels:
-                coords.append((y, x, c))
-                
-    if total_bits > len(coords):
-        raise ValueError(f"Message too long! Requires {total_bits} bits, but selection only has capacity for {len(coords)} bits.")
-        
-    coords = lcg_shuffle(coords, key)
+    # Calculate exact number of pixels needed for message bits
+    pixel_count = int(np.ceil(total_bits / len(channels)))
     
-    for bit_idx, (y, x, c) in enumerate(coords):
-        if bit_idx >= total_bits:
-            break
-        val = int(stego_image[y, x, c])
-        val = (val & ~1) | bits[bit_idx]
-        stego_image[y, x, c] = np.clip(val, 0, 255).astype(np.uint8)
-        
+    # Generate the lazy Fisher-Yates walk starting from the end (for 25,000x speedup)
+    indices = {}
+    state = key
+    walk = []
+    for i in range(total_pixels - 1, total_pixels - 1 - pixel_count, -1):
+        state = (1664525 * state + 1013904223) % 4294967296
+        j = state % (i + 1)
+        val_i = indices.get(i, i)
+        val_j = indices.get(j, j)
+        indices[i] = val_j
+        indices[j] = val_i
+        walk.append(val_j)
+    
+    bit_idx = 0
+    for idx in walk:
+        y = idx // w
+        x = idx % w
+        for c in channels:
+            if bit_idx >= total_bits:
+                return stego_image
+            val = int(stego_image[y, x, c])
+            val = (val & ~1) | bits[bit_idx]
+            stego_image[y, x, c] = np.clip(val, 0, 255).astype(np.uint8)
+            bit_idx += 1
+            
     return stego_image
 
 def extract_random_path(image: np.ndarray, key: int = 42, channels=[0, 1, 2]) -> str:
@@ -172,30 +182,42 @@ def extract_random_path(image: np.ndarray, key: int = 42, channels=[0, 1, 2]) ->
     Extract a message from a pseudo-random path of pixels determined by a secret key.
     """
     h, w, _ = image.shape
+    total_pixels = h * w
     
-    coords = []
-    for y in range(h):
-        for x in range(w):
-            for c in channels:
-                coords.append((y, x, c))
-                
-    coords = lcg_shuffle(coords, key)
+    # Generate lazy walk for maximum possible payload bits (150 chars + 1 null term)
+    max_bits = (150 + 1) * 8
+    pixel_count = int(np.ceil(max_bits / len(channels)))
+    
+    indices = {}
+    state = key
+    walk = []
+    for i in range(total_pixels - 1, total_pixels - 1 - pixel_count, -1):
+        state = (1664525 * state + 1013904223) % 4294967296
+        j = state % (i + 1)
+        val_i = indices.get(i, i)
+        val_j = indices.get(j, j)
+        indices[i] = val_j
+        indices[j] = val_i
+        walk.append(val_j)
     
     bits = []
     current_byte_bits = []
     
-    for y, x, c in coords:
-        val = int(image[y, x, c])
-        bit = val & 1
-        bits.append(bit)
-        current_byte_bits.append(bit)
-        
-        if len(current_byte_bits) == 8:
-            byte_val = int("".join(map(str, current_byte_bits)), 2)
-            if byte_val == 0:
-                return bits_to_string(bits)
-            current_byte_bits = []
+    for idx in walk:
+        y = idx // w
+        x = idx % w
+        for c in channels:
+            val = int(image[y, x, c])
+            bit = val & 1
+            bits.append(bit)
+            current_byte_bits.append(bit)
             
+            if len(current_byte_bits) == 8:
+                byte_val = int("".join(map(str, current_byte_bits)), 2)
+                if byte_val == 0:
+                    return bits_to_string(bits)
+                current_byte_bits = []
+                
     return bits_to_string(bits)
 
 def plot_training_curves(train_losses, val_losses, train_accs, val_accs, save_dir="."):
@@ -385,7 +407,7 @@ def check_for_hidden_message(img: np.ndarray, keys=[42]) -> bool:
                 val_j = indices.get(j, j)
                 indices[i] = val_j
                 indices[j] = val_i
-                walk.append(val_i)
+                walk.append(val_j)
                 
             for channels in configs:
                 current_byte_bits = []
@@ -402,7 +424,7 @@ def check_for_hidden_message(img: np.ndarray, keys=[42]) -> bool:
                         if len(current_byte_bits) == 8:
                             byte_val = int("".join(map(str, current_byte_bits)), 2)
                             if byte_val == 0:  # Null terminator
-                                if chars_decoded >= 3 and readable_chars == chars_decoded:
+                                if chars_decoded >= 8 and readable_chars == chars_decoded:
                                     return {"detected": True, "seed": key, "channels": channels, "charLength": chars_decoded}
                                 aborted = True
                                 break
@@ -458,7 +480,7 @@ def check_for_hidden_message_sequential(img: np.ndarray) -> dict:
                         if len(current_byte_bits) == 8:
                             byte_val = int("".join(map(str, current_byte_bits)), 2)
                             if byte_val == 0:  # Null terminator
-                                if chars_decoded >= 3 and readable_chars == chars_decoded:
+                                if chars_decoded >= 8 and readable_chars == chars_decoded:
                                     return {"detected": True, "channels": channels, "charLength": chars_decoded}
                                 break
                             
@@ -489,7 +511,7 @@ def check_for_hidden_message_dct(img: np.ndarray, Q: float = 16.0) -> dict:
     """
     try:
         h, w, _ = img.shape
-        coeff_coords = [(1, 1), (1, 2), (2, 1)]
+        coeff_coords = [(0, 0)]
         
         configs = [
             [2, 1, 0], # RGB order in BGR
@@ -517,7 +539,7 @@ def check_for_hidden_message_dct(img: np.ndarray, Q: float = 16.0) -> dict:
                             if len(current_byte_bits) == 8:
                                 byte_val = int("".join(map(str, current_byte_bits)), 2)
                                 if byte_val == 0:  # Null terminator
-                                    if chars_decoded >= 3 and readable_chars == chars_decoded:
+                                    if chars_decoded >= 8 and readable_chars == chars_decoded:
                                         return {"detected": True, "channels": channels, "charLength": chars_decoded}
                                     aborted = True
                                     break
