@@ -133,7 +133,7 @@ def get_heatmap_overlay(original_img, cam_np, alpha=0.5):
     return superimposed_img, heatmap_colored
 
 
-def run_inference(model, image_tensor, device, threshold=0.60):
+def run_inference(model, image_tensor, device, threshold=0.90):
     """Run model inference and return predicted class, probabilities, and confidence."""
     model.eval()
     with torch.no_grad():
