@@ -143,7 +143,7 @@ def api_analyze():
                     val_j = indices.get(j, j)
                     indices[i] = val_j
                     indices[j] = val_i
-                    walk.append(val_i)
+                    walk.append(val_j)
                     
                 for idx in walk:
                     px_y = idx // w
