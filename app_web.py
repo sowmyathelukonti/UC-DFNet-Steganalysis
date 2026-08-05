@@ -125,39 +125,87 @@ def api_analyze():
         if pred_label == "Clean Image":
             overlaid_cam = original_rgb.copy()
         else:
-            # Run neural Grad-CAM for all stego detections (active or neural) to generate structured red highlight spots
-            grad_cam = GradCAM(model, model.stage1_deb)
-            cam_np, _, _ = grad_cam.generate_cam(image_tensor.to(device), target_class=1)
+            h, w, _ = cv_img.shape
+            cam_np = np.zeros((h, w), dtype=np.float32)
             
-            # Convert neural Grad-CAM activations to matching sparse red dots
-            h_orig, w_orig, _ = original_rgb.shape
-            cam_resized = cv2.resize(cam_np, (w_orig, h_orig))
-            cam_max = cam_resized.max()
-            if cam_max > 0:
-                cam_resized = cam_resized / cam_max
+            if is_active_stego and active_details is not None:
+                if active_details["type"] == "Random Path LSB":
+                    seed = active_details["seed"]
+                    channels = active_details["channels"]
+                    bit_count = (active_details["charLength"] + 1) * 8
+                    pixel_count = int(np.ceil(bit_count / len(channels)))
+                    
+                    total_pixels = h * w
+                    indices = {}
+                    state = seed
+                    walk = []
+                    for i in range(total_pixels - 1, total_pixels - 1 - pixel_count, -1):
+                        state = (1664525 * state + 1013904223) % 4294967296
+                        j = state % (i + 1)
+                        val_i = indices.get(i, i)
+                        val_j = indices.get(j, j)
+                        indices[i] = val_j
+                        indices[j] = val_i
+                        walk.append(val_j)
+                        
+                    for idx in walk:
+                        px_y = idx // w
+                        px_x = idx % w
+                        cam_np[px_y, px_x] = 1.0
+                        
+                elif active_details["type"] == "Sequential LSB/LSB Matching":
+                    channels = active_details["channels"]
+                    bit_count = (active_details["charLength"] + 1) * 8
+                    pixel_count = int(np.ceil(bit_count / len(channels)))
+                    
+                    for idx in range(pixel_count):
+                        px_y = idx // w
+                        px_x = idx % w
+                        cam_np[px_y, px_x] = 1.0
+                        
+                elif active_details["type"] == "DCT Domain (JPEG)":
+                    channels = active_details["channels"]
+                    bit_count = (active_details["charLength"] + 1) * 8
+                    coeff_per_block = 1
+                    total_dct_coeffs_needed = bit_count
+                    coeffs_found = 0
+                    
+                    for y_start in range(0, h - 7, 8):
+                        for x_start in range(0, w - 7, 8):
+                            for c in channels:
+                                if coeffs_found >= total_dct_coeffs_needed:
+                                    break
+                                cam_np[y_start:y_start+8, x_start:x_start+8] = 1.0
+                                coeffs_found += coeff_per_block
+                            if coeffs_found >= total_dct_coeffs_needed:
+                                break
+                        if coeffs_found >= total_dct_coeffs_needed:
+                            break
+            else:
+                # Fallback to neural Grad-CAM when active check is negative but neural stego is positive
+                grad_cam = GradCAM(model, model.stage1_deb)
+                raw_cam, _, _ = grad_cam.generate_cam(image_tensor.to(device), target_class=1)
+                grad_cam.remove_hooks()
+                cam_np = cv2.resize(raw_cam, (w, h))
                 
-            # Exclude the outer 4% of margins to eliminate neural padding/boundary artifacts
-            border_y = max(4, int(h_orig * 0.04))
-            border_x = max(4, int(w_orig * 0.04))
-            inner_mask = np.zeros((h_orig, w_orig), dtype=bool)
-            inner_mask[border_y:-border_y, border_x:-border_x] = True
+            # Apply a strong Gaussian blur to make discrete points glow like a continuous heat map
+            ksize = 51 if min(h, w) >= 512 else 31
+            cam_blurred = cv2.GaussianBlur(cam_np, (ksize, ksize), 0)
+            cam_max = cam_blurred.max()
             
-            # Use a dynamic threshold based on the top 10% (90th percentile) of inner activations
-            inner_vals = cam_resized[inner_mask]
-            thresh = np.percentile(inner_vals, 90.0) if inner_vals.size > 0 else 0.5
+            if cam_max > 0:
+                cam_norm = (cam_blurred / cam_max * 255).astype(np.uint8)
+                alpha_mask = np.expand_dims(cam_blurred / cam_max, axis=-1)
+            else:
+                cam_norm = np.zeros_like(cam_blurred, dtype=np.uint8)
+                alpha_mask = np.zeros((h, w, 1), dtype=np.float32)
+                
+            # Generate the standard standard Grad-CAM JET colored heatmap
+            heatmap_color = cv2.applyColorMap(cam_norm, cv2.COLORMAP_JET)
+            heatmap_rgb = cv2.cvtColor(heatmap_color, cv2.COLOR_BGR2RGB)
             
-            high_act = cam_resized > thresh
-            grid_y, grid_x = np.mgrid[0:h_orig, 0:w_orig]
-            sparse_mask = (grid_y % 3 == 0) & (grid_x % 3 == 0)
-            
-            dot_mask = high_act & sparse_mask & inner_mask
-            
-            kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
-            cam_dilated = cv2.dilate(dot_mask.astype(np.uint8), kernel)
-            
-            overlaid_cam = original_rgb.copy()
-            overlaid_cam[cam_dilated > 0] = [255, 0, 0]
-            grad_cam.remove_hooks()
+            # Blend the heatmap over the original image using a high-attention alpha mask (up to 70% opacity)
+            overlaid_cam = (original_rgb * (1.0 - 0.7 * alpha_mask) + heatmap_rgb * (0.7 * alpha_mask)).astype(np.uint8)
         
         # 3. Extract Intermediate Feature maps
         features_grid = visualize_features(model, image_tensor, device, layer_name="stage1_deb")
@@ -213,14 +261,13 @@ def api_embed():
     if img is None:
         return jsonify({"success": False, "error": "Failed to decode uploaded image"}), 400
         
-    # Map channels
     channel_map = {
-        "All Channels (RGB)": [0, 1, 2],
-        "Red Channel Only": [0],
+        "All Channels (RGB)": [2, 1, 0],
+        "Red Channel Only": [2],
         "Green Channel Only": [1],
-        "Blue Channel Only": [2]
+        "Blue Channel Only": [0]
     }
-    ch_list = channel_map.get(channel_desc, [0, 1, 2])
+    ch_list = channel_map.get(channel_desc, [2, 1, 0])
     
     try:
         # Run steganographic embedding
@@ -265,14 +312,13 @@ def api_extract():
     if img is None:
         return jsonify({"success": False, "error": "Failed to decode uploaded stego image"}), 400
         
-    # Map channels
     channel_map = {
-        "All Channels (RGB)": [0, 1, 2],
-        "Red Channel Only": [0],
+        "All Channels (RGB)": [2, 1, 0],
+        "Red Channel Only": [2],
         "Green Channel Only": [1],
-        "Blue Channel Only": [2]
+        "Blue Channel Only": [0]
     }
-    ch_list = channel_map.get(channel_desc, [0, 1, 2])
+    ch_list = channel_map.get(channel_desc, [2, 1, 0])
     
     try:
         if algo in ["LSB Replacement / Matching", "Sequential LSB", "LSB Matching"]:
